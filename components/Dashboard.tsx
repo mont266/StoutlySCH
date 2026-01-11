@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { type Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
-import { type ContentItem, type Post, type Rating } from '../types';
+import { type ContentItem, type Post, type Rating, isRating } from '../types';
 import Header from './Header';
 import Spinner from './Spinner';
 import ContentCard from './ContentCard';
 import Button from './Button';
+import ToggleSwitch from './ToggleSwitch';
 
 interface DashboardProps {
   session: Session;
@@ -22,6 +23,8 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showPosts, setShowPosts] = useState(true);
+  const [showRatings, setShowRatings] = useState(true);
 
   // Effect for handling the scroll-to-top button visibility
   useEffect(() => {
@@ -133,6 +136,22 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     }
   };
 
+  const filteredContent = useMemo(() => {
+    if (!showPosts && !showRatings) {
+      return [];
+    }
+    return content.filter(item => {
+      const itemIsRatingType = isRating(item);
+      if (showRatings && itemIsRatingType) {
+        return true;
+      }
+      if (showPosts && !itemIsRatingType) {
+        return true;
+      }
+      return false;
+    });
+  }, [content, showPosts, showRatings]);
+
 
   return (
     <div className="min-h-screen bg-[#111827] text-gray-200">
@@ -148,16 +167,40 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             </Button>
         </div>
 
+        <div className="bg-gray-800/50 rounded-lg p-4 mb-6 flex items-center justify-center gap-6 md:gap-8">
+            <ToggleSwitch
+                id="show-ratings"
+                label="Show Ratings"
+                checked={showRatings}
+                onChange={setShowRatings}
+            />
+            <ToggleSwitch
+                id="show-posts"
+                label="Show Posts"
+                checked={showPosts}
+                onChange={setShowPosts}
+            />
+        </div>
+
+
         {loading && <Spinner />}
         {error && <p className="text-center text-red-400 bg-red-900/50 p-4 rounded-md">{error}</p>}
         
         {!loading && !error && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {content.map((item) => (
+              {filteredContent.map((item) => (
                 <ContentCard key={item.id} item={item} />
               ))}
             </div>
+
+            {filteredContent.length === 0 && content.length > 0 && (
+                <div className="text-center py-16 bg-gray-800 rounded-lg">
+                    <h3 className="text-xl font-semibold text-white">No Content to Display</h3>
+                    <p className="text-gray-400 mt-2">Enable a filter above to see posts or ratings.</p>
+                </div>
+            )}
+            
             {hasMore && (
               <div className="mt-8 text-center">
                 <Button onClick={handleLoadMore} isLoading={isLoadingMore}>
