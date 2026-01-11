@@ -14,14 +14,49 @@ const Login: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    // 1. Sign in the user
+    const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (signInError) {
+      setError(signInError.message);
+      setLoading(false);
+      return;
     }
+
+    if (user) {
+      // 2. Check for permissions in the 'profiles' table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_team_member, is_developer')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        // If profile doesn't exist or there's an error, sign out and show error
+        await supabase.auth.signOut();
+        setError('Could not verify user permissions. Please contact support.');
+        setLoading(false);
+        return;
+      }
+      
+      // 3. Verify permissions
+      const hasPermission = profile.is_team_member || profile.is_developer;
+
+      if (!hasPermission) {
+        // If user doesn't have permissions, sign out and show error
+        await supabase.auth.signOut();
+        setError('Access denied. You do not have the required permissions.');
+        setLoading(false);
+        return;
+      }
+
+      // If we reach here, the user is authenticated and authorized.
+      // The onAuthStateChange listener in App.tsx will handle redirecting to the dashboard.
+    }
+    
     setLoading(false);
   };
 
