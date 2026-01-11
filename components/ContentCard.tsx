@@ -32,7 +32,9 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
   return (
     <div className="bg-[#1F2937] rounded-lg shadow-lg overflow-hidden flex flex-col">
       {itemIsRating && item.image_url && (
-        <img src={item.image_url} alt={`A pint of Guinness at ${item.pubs?.name || 'a pub'}`} className="w-full h-48 object-cover" />
+        <div className="w-full h-48 bg-black flex items-center justify-center">
+            <img src={item.image_url} alt={`A pint of Guinness at ${item.pubs?.name || 'a pub'}`} className="w-full h-full object-contain" />
+        </div>
       )}
       <div className="p-5 flex-grow flex flex-col">
         <div className="flex items-center mb-4">
@@ -50,8 +52,22 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
         <div className="flex-grow">
             {itemIsRating ? (
             <>
-                <div className="mb-2">
-                <span className="font-bold text-amber-400">{item.quality}/10</span> at <span className="font-semibold text-gray-300">{item.pubs?.name || 'a pub'}</span>
+                <div className="flex items-center gap-6 mb-3 text-sm">
+                    <div className="flex items-center gap-1.5 text-amber-400" title="Quality Rating">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                        <span className="font-bold text-lg">{item.quality}</span>
+                        <span className="text-gray-400 font-medium">/ 10</span>
+                    </div>
+                     {item.price && (
+                        <div className="flex items-center gap-1.5 text-green-400" title="Value Rating">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h12v4a2 2 0 002-2V6a2 2 0 00-2-2H4z" clipRule="evenodd" /><path fillRule="evenodd" d="M18 9H2a1 1 0 00-1 1v4a1 1 0 001 1h16a1 1 0 001-1v-4a1 1 0 00-1-1zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5.5 0a.5.5 0 100-1 .5.5 0 000 1zM11 13a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+                            <span className="font-bold text-lg">{item.price}</span>
+                            <span className="text-gray-400 font-medium">/ 5</span>
+                        </div>
+                     )}
+                </div>
+                <div className="mb-2 text-gray-300">
+                    Rated at <span className="font-semibold text-white">{item.pubs?.name || 'a pub'}</span>
                 </div>
                 <p className="text-gray-300 italic">"{item.message}"</p>
             </>

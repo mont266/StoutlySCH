@@ -9,6 +9,7 @@ export interface Rating {
   id: string;
   created_at: string;
   quality: number;
+  price: number;
   message: string;
   image_url: string | null;
   like_count: number;

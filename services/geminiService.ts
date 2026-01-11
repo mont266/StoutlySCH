@@ -38,15 +38,18 @@ const generatePrompt = (item: ContentItem): string => {
 
   if (isRating(item)) {
     const imageInfo = item.image_url ? "\n- Note: This rating includes a photo of the pint, making it great for visual platforms." : "";
+    // Assuming price is a rating out of 5 for value.
+    const priceInfo = item.price ? `\n- Value Rating: ${item.price}/5` : "";
+
     return `${commonIntro}
 
 Analyze the following Guinness rating:
 - User: ${item.profiles?.username || 'An anonymous user'}
 - Pub: ${item.pubs?.name || 'Unknown Pub'}
-- Rating: ${item.quality}/10
+- Quality Rating: ${item.quality}/10${priceInfo}
 - Review: "${item.message}"${statsInfo}${imageInfo}
 
-Based on this, generate a social media post idea. Focus on what makes this review compelling, funny, or authentic. Consider the engagement numbers and the presence of a photo.`;
+Based on this, generate a social media post idea. Focus on what makes this review compelling, funny, or authentic. Consider the engagement numbers, ratings, and the presence of a photo.`;
   } else {
     return `${commonIntro}
 
