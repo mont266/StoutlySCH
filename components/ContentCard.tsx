@@ -34,7 +34,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
       <div className="p-5 flex-grow">
         <div className="flex items-center mb-4">
           <img
-            src={user?.avatar_url || `https://i.pravatar.cc/150?u=${item.id}`}
+            src={user?.avatar_id || `https://i.pravatar.cc/150?u=${item.id}`}
             alt={user?.username || 'User avatar'}
             className="w-10 h-10 rounded-full mr-3 border-2 border-gray-600"
           />

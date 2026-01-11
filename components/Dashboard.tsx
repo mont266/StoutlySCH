@@ -22,12 +22,12 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       const [ratingsRes, postsRes] = await Promise.all([
         supabase
           .from('ratings')
-          .select('id, created_at, score, review_text, pub_name, profiles:profiles!ratings_user_id_fkey(username, avatar_url)')
+          .select('id, created_at, score, review_text, pub_name, profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
           .order('created_at', { ascending: false })
           .limit(20),
         supabase
           .from('posts')
-          .select('id, created_at, content, profiles (username, avatar_url)')
+          .select('id, created_at, content, profiles (username, avatar_id)')
           .order('created_at', { ascending: false })
           .limit(20),
       ]);

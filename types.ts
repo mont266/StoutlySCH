@@ -2,7 +2,7 @@ import { type User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface Profile {
   username: string;
-  avatar_url: string;
+  avatar_id: string;
 }
 
 export interface Rating {
