@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { type ContentItem, isRating, type SocialAnalysis } from '../types';
 import { getSocialMediaAngle } from '../services/geminiService';
+import { supabase } from '../services/supabaseClient';
 import Button from './Button';
 import Spinner from './Spinner';
 
@@ -29,6 +30,19 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
   const user = item.profiles;
   const itemIsRating = isRating(item);
 
+  const getAvatarUrl = () => {
+    const avatarPath = user?.avatar_id;
+    if (avatarPath) {
+      // It's a path in Supabase storage. Construct the public URL.
+      // Assuming the bucket is named 'avatars'.
+      const { data } = supabase.storage.from('avatars').getPublicUrl(avatarPath);
+      return data.publicUrl;
+    }
+    // Fallback to DiceBear using username as a seed
+    const seed = user?.username || item.id;
+    return `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(seed)}`;
+  }
+
   return (
     <div className="bg-[#1F2937] rounded-lg shadow-lg overflow-hidden flex flex-col">
       {itemIsRating && item.image_url && (
@@ -39,9 +53,9 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
       <div className="p-5 flex-grow flex flex-col">
         <div className="flex items-center mb-4">
           <img
-            src={user?.avatar_id || `https://i.pravatar.cc/150?u=${item.id}`}
+            src={getAvatarUrl()}
             alt={user?.username || 'User avatar'}
-            className="w-10 h-10 rounded-full mr-3 border-2 border-gray-600"
+            className="w-10 h-10 rounded-full mr-3 border-2 border-gray-600 bg-gray-700"
           />
           <div>
             <p className="font-semibold text-white">{user?.username || 'Stoutly User'}</p>

@@ -37,12 +37,12 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
 
       const ratings: Rating[] = (ratingsRes.data || []).map((r: any) => ({
         ...r,
-        pubs: r.pubs?.[0] || null,
-        profiles: r.profiles?.[0] || null,
+        pubs: r.pubs || null,
+        profiles: r.profiles || null,
       }));
       const posts: Post[] = (postsRes.data || []).map((p: any) => ({
         ...p,
-        profiles: p.profiles?.[0] || null, 
+        profiles: p.profiles || null, 
       }));
 
       const combinedContent = [...ratings, ...posts].sort(
