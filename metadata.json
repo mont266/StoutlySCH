@@ -1,0 +1,5 @@
+{
+  "name": "Stoutly Social Content Hub",
+  "description": "An internal tool for the Stoutly social network that uses Google Gemini to analyze user-generated posts and ratings to identify high-quality content for social media promotion.",
+  "requestFramePermissions": []
+}
