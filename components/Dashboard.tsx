@@ -22,7 +22,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       const [ratingsRes, postsRes] = await Promise.all([
         supabase
           .from('ratings')
-          .select('id, created_at, score, review_text, pub_name, profiles (username, avatar_url)')
+          .select('id, created_at, score, review_text, pub_name, profiles:profiles!ratings_user_id_fkey(username, avatar_url)')
           .order('created_at', { ascending: false })
           .limit(20),
         supabase
@@ -39,11 +39,11 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       // expect it to be a single `Profile` object. This transformation takes the first profile from the array.
       const ratings: Rating[] = (ratingsRes.data || []).map((r: any) => ({
         ...r,
-        profiles: r.profiles?.[0] || null,
+        profiles: r.profiles, // The data is no longer an array with the explicit join
       }));
       const posts: Post[] = (postsRes.data || []).map((p: any) => ({
         ...p,
-        profiles: p.profiles?.[0] || null,
+        profiles: p.profiles?.[0] || null, // Posts might still return an array
       }));
 
       const combinedContent = [...ratings, ...posts].sort(
