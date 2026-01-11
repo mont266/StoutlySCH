@@ -14,6 +14,7 @@ export interface Rating {
   image_url: string | null;
   like_count: number;
   comment_count: number;
+  is_private?: boolean;
   pubs: { name: string } | null;
   profiles: Profile | null;
 }
