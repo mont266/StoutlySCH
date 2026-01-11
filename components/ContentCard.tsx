@@ -47,9 +47,9 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
         {itemIsRating ? (
           <>
             <div className="mb-2">
-              <span className="font-bold text-amber-400">{item.score}/10</span> at <span className="font-semibold text-gray-300">{item.pub_name}</span>
+              <span className="font-bold text-amber-400">{item.quality}/10</span> at <span className="font-semibold text-gray-300">{item.pubs?.name || 'a pub'}</span>
             </div>
-            <p className="text-gray-300 italic">"{item.review_text}"</p>
+            <p className="text-gray-300 italic">"{item.message}"</p>
           </>
         ) : (
           <p className="text-gray-300">{item.content}</p>

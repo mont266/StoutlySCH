@@ -22,7 +22,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       const [ratingsRes, postsRes] = await Promise.all([
         supabase
           .from('ratings')
-          .select('id, created_at, score, review_text, pub_name, profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
+          .select('id, created_at, quality, message, pubs(name), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
           .order('created_at', { ascending: false })
           .limit(20),
         supabase
@@ -35,11 +35,13 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       if (ratingsRes.error) throw ratingsRes.error;
       if (postsRes.error) throw postsRes.error;
 
-      // FIX: The Supabase query returns `profiles` as an array, while the app's `Rating` and `Post` types
-      // expect it to be a single `Profile` object. This transformation takes the first profile from the array.
+      // FIX: The Supabase query returns nested relations as arrays (e.g., `pubs`, `profiles`).
+      // The `Rating` type expects a single object or null. This map transforms the data
+      // by taking the first item from the nested array, aligning with the type definition.
       const ratings: Rating[] = (ratingsRes.data || []).map((r: any) => ({
         ...r,
-        profiles: r.profiles, // The data is no longer an array with the explicit join
+        pubs: r.pubs?.[0] || null,
+        profiles: r.profiles?.[0] || null,
       }));
       const posts: Post[] = (postsRes.data || []).map((p: any) => ({
         ...p,

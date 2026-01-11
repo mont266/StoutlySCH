@@ -8,9 +8,9 @@ export interface Profile {
 export interface Rating {
   id: string;
   created_at: string;
-  score: number;
-  review_text: string;
-  pub_name: string;
+  quality: number;
+  message: string;
+  pubs: { name: string } | null;
   profiles: Profile | null;
 }
 
@@ -33,5 +33,5 @@ export type AppUser = SupabaseUser;
 
 // Type guard to check if an item is a Rating
 export const isRating = (item: ContentItem): item is Rating => {
-  return (item as Rating).score !== undefined;
+  return (item as Rating).quality !== undefined;
 };
