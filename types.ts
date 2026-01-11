@@ -15,7 +15,13 @@ export interface Rating {
   like_count: number;
   comment_count: number;
   is_private?: boolean;
-  pubs: { name: string } | null;
+  exact_price?: number | null;
+  pubs: {
+    name: string;
+    lng: number | null;
+    lat: number | null;
+    country_code: string | null;
+  } | null;
   profiles: Profile | null;
 }
 

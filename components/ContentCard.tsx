@@ -10,10 +10,9 @@ interface ContentCardProps {
   item: ContentItem;
 }
 
-const BeerMugIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-      <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7S2 13.866 2 10V4h16v6zM4 6v4c0 2.761 2.686 5 6 5s6-2.239 6-5V6H4z"/>
-      <path d="M15 10V4h2v7c0 1.105-.895 2-2 2h-1v-2h1z"/>
+const ShieldIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M4 5a1 1 0 011-1h10a1 1 0 011 1v6.28c0 3.39-4.13 5.48-6 6.47-1.87-1-6-3.08-6-6.47V5z" />
     </svg>
 );
 
@@ -22,6 +21,22 @@ const PriceTagIcon = () => (
         <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A1 1 0 012 10V5a1 1 0 011-1h5a1 1 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
     </svg>
 );
+
+
+const getCurrencySymbol = (countryCode: string | null | undefined): string => {
+    if (!countryCode) return '';
+    switch (countryCode.toUpperCase()) {
+        case 'GB':
+        case 'UK':
+            return '£';
+        case 'IE':
+            return '€';
+        case 'US':
+            return '$';
+        default:
+            return '';
+    }
+}
 
 
 const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
@@ -47,26 +62,25 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
 
   const getAvatarUrl = () => {
     const avatarPath = user?.avatar_id;
+    const username = user?.username || item.id;
+    const fallbackUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(username)}`;
 
     if (!avatarPath) {
-      const seed = user?.username || item.id;
-      return `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(seed)}`;
+        return fallbackUrl;
     }
-
-    if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
-      return avatarPath;
+    if (avatarPath.startsWith('http')) {
+        return avatarPath;
     }
-
-    const { data } = supabase.storage.from('avatars').getPublicUrl(avatarPath);
-    
-    if (data?.publicUrl) {
-      return data.publicUrl;
+    try {
+        const { data } = supabase.storage.from('avatars').getPublicUrl(avatarPath);
+        return data?.publicUrl || fallbackUrl;
+    } catch (e) {
+        console.error("Error generating Supabase avatar URL:", e);
+        return fallbackUrl;
     }
-
-    // Fallback if Supabase URL fails for some reason
-    const seed = user?.username || item.id;
-    return `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(seed)}`;
   }
+
+  const currencySymbol = itemIsRating ? getCurrencySymbol(item.pubs?.country_code) : '';
 
   return (
     <div className="bg-[#1F2937] rounded-lg shadow-lg overflow-hidden flex flex-col">
@@ -75,58 +89,63 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
             <img src={item.image_url} alt={`A pint of Guinness at ${item.pubs?.name || 'a pub'}`} className="w-full h-full object-contain" />
         </div>
       )}
-      <div className="p-5 flex-grow flex flex-col">
-        <div className="flex items-center mb-4">
-          <img
-            src={getAvatarUrl()}
-            alt={user?.username || 'User avatar'}
-            className="w-10 h-10 rounded-full mr-3 border-2 border-gray-600 bg-gray-700"
-          />
-          <div className="flex-grow">
-            <p className="font-semibold text-white">{user?.username || 'Stoutly User'}</p>
-            <p className="text-xs text-gray-400">{new Date(item.created_at).toLocaleString()}</p>
-          </div>
-          <div className="ml-auto">
-            {itemIsRating && item.is_private && (
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 bg-yellow-900/50 px-2 py-1 rounded-full" title="This rating is private">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
-                </svg>
-                <span>Private</span>
+      <div className="p-5 flex-grow flex flex-col justify-between">
+        <div>
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center">
+                <img
+                    src={getAvatarUrl()}
+                    alt={user?.username || 'User avatar'}
+                    className="w-10 h-10 rounded-full mr-3 border-2 border-gray-600 bg-gray-700 object-cover"
+                />
+                <div>
+                    <p className="font-semibold text-white">{user?.username || 'Stoutly User'}</p>
+                    <p className="text-xs text-gray-400">{new Date(item.created_at).toLocaleString()}</p>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="flex-grow">
-            {itemIsRating ? (
-            <>
-                <div className="flex items-center gap-4 mb-3 text-sm flex-wrap">
-                    <RatingDisplay
-                        icon={<BeerMugIcon />}
-                        rating={item.quality}
-                        maxRating={10}
-                        filledColor="text-amber-400"
-                        title={`Quality: ${item.quality}/10`}
-                    />
-                     {item.price > 0 && (
-                       <RatingDisplay
-                            icon={<PriceTagIcon />}
-                            rating={item.price}
+              {itemIsRating && item.is_private && (
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-yellow-400 bg-yellow-900/50 px-2 py-1 rounded-full" title="This rating is private">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                    </svg>
+                    <span>Private</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+                {itemIsRating && (
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <RatingDisplay
+                            icon={<ShieldIcon />}
+                            rating={item.quality / 2}
                             maxRating={5}
-                            filledColor="text-green-400"
-                            title={`Price: ${item.price}/5`}
-                       />
-                     )}
-                </div>
-                <div className="mb-2 text-gray-300">
-                    Rated at <span className="font-semibold text-white">{item.pubs?.name || 'a pub'}</span>
-                </div>
-                <p className="text-gray-300 italic">"{item.message}"</p>
-            </>
-            ) : (
-            <p className="text-gray-300">{item.content}</p>
-            )}
+                            filledColor="text-yellow-400"
+                            title={`Quality: ${item.quality}/10`}
+                        />
+                         {item.price > 0 && (
+                           <RatingDisplay
+                                icon={<PriceTagIcon />}
+                                rating={item.price}
+                                maxRating={5}
+                                filledColor="text-green-400"
+                                title={`Price: ${item.price}/5`}
+                           />
+                         )}
+                    </div>
+                )}
+                {itemIsRating && (
+                    <div className="text-gray-300">
+                        Rated at <span className="font-semibold text-white">{item.pubs?.name || 'a pub'}</span>
+                        {item.exact_price && currencySymbol && (
+                            <span className="ml-2 text-sm text-green-400 font-mono">({currencySymbol}{item.exact_price.toFixed(2)})</span>
+                        )}
+                    </div>
+                )}
+                <p className={itemIsRating ? "text-gray-300 italic" : "text-gray-200"}>
+                    {itemIsRating ? `"${item.message}"` : item.content}
+                </p>
+            </div>
         </div>
 
         <div className="mt-4 flex items-center justify-end gap-4 text-sm text-gray-400">
