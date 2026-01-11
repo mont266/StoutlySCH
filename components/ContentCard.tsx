@@ -33,15 +33,19 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
   const getAvatarUrl = () => {
     const avatarPath = user?.avatar_id;
     if (avatarPath) {
-      // It's a path in Supabase storage. Construct the public URL.
-      // Assuming the bucket is named 'avatars'.
+      // Check if it's already a full URL (like a stored DiceBear link)
+      if (avatarPath.startsWith('http')) {
+        return avatarPath;
+      }
+      // Otherwise, construct the URL from Supabase storage
       const { data } = supabase.storage.from('avatars').getPublicUrl(avatarPath);
       return data.publicUrl;
     }
-    // Fallback to DiceBear using username as a seed
+    // Fallback to generating a new DiceBear URL if no avatar_id is present
     const seed = user?.username || item.id;
     return `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(seed)}`;
   }
+
 
   return (
     <div className="bg-[#1F2937] rounded-lg shadow-lg overflow-hidden flex flex-col">
@@ -73,8 +77,10 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
                         <span className="text-gray-400 font-medium">/ 10</span>
                     </div>
                      {item.price && (
-                        <div className="flex items-center gap-1.5 text-green-400" title="Value Rating">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h12v4a2 2 0 002-2V6a2 2 0 00-2-2H4z" clipRule="evenodd" /><path fillRule="evenodd" d="M18 9H2a1 1 0 00-1 1v4a1 1 0 001 1h16a1 1 0 001-1v-4a1 1 0 00-1-1zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5.5 0a.5.5 0 100-1 .5.5 0 000 1zM11 13a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+                        <div className="flex items-center gap-1.5 text-green-400" title="Price Rating">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A1 1 0 012 10V5a1 1 0 011-1h5a1 1 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                            </svg>
                             <span className="font-bold text-lg">{item.price}</span>
                             <span className="text-gray-400 font-medium">/ 5</span>
                         </div>
@@ -99,8 +105,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
             </div>
             <div className="flex items-center gap-1.5">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-                    <path d="M15 7v2a2 2 0 01-2 2H9.5a.5.5 0 01-.5-.5v-1.293l.293-.293A1 1 0 0010 8.586V7a1 1 0 00-1-1H4a1 1 0 00-1 1v2a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 00-1-1H4a2 2 0 00-2 2v5a2 2 0 002 2h7a2 2 0 002-2v-5a2 2 0 00-2-2h-1z" />
+                  <path fillRule="evenodd" d="M10 2c-4.418 0-8 3.134-8 7 0 2.135.986 4.093 2.585 5.343C3.963 15.157 4 16.279 4 17.5c0 .552.448 1 1 1h1.5a.5.5 0 00.354-.146L10 14.828l3.146 3.526A.5.5 0 0013.5 18.5H15c.552 0 1-.448 1-1 0-1.221.037-2.343.415-3.157C17.014 13.093 18 11.135 18 9c0-3.866-3.582-7-8-7z" clipRule="evenodd" />
                 </svg>
                 <span>{item.comment_count}</span>
             </div>
