@@ -1,14 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type ContentItem, isRating, type SocialAnalysis } from '../types';
 
-// FIX: Use `process.env.API_KEY` as required by the coding guidelines.
-// This also resolves the "Property 'env' does not exist on type 'ImportMeta'" error.
-// The API key is assumed to be set in the execution environment.
-if (!process.env.API_KEY) {
-  throw new Error("Google Gemini API key is required. Make sure API_KEY is set in your environment.");
+// The API key is injected by the Vite build process from environment variables.
+// In your hosting provider (like Netlify), this variable must be named VITE_API_KEY.
+const apiKey = (import.meta as any).env.VITE_API_KEY;
+
+if (!apiKey) {
+  throw new Error("Google Gemini API key is required. Make sure VITE_API_KEY is set in your environment.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: apiKey });
 
 const analysisSchema = {
   type: Type.OBJECT,
