@@ -46,7 +46,7 @@ const generatePrompt = (item: ContentItem): string => {
 Analyze the following Guinness rating:
 - User: ${item.profiles?.username || 'An anonymous user'}
 - Pub: ${item.pubs?.name || 'Unknown Pub'}
-- Quality Rating: ${item.quality}/10${priceInfo}
+- Quality Rating: ${item.quality}/5${priceInfo}
 - Review: "${item.message}"${statsInfo}${imageInfo}
 
 Based on this, generate a social media post idea. Focus on what makes this review compelling, funny, or authentic. Consider the engagement numbers, ratings, and the presence of a photo.`;

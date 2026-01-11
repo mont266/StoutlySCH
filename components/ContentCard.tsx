@@ -11,13 +11,13 @@ interface ContentCardProps {
 }
 
 const ShieldIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+    <svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
         <path d="M4 5a1 1 0 011-1h10a1 1 0 011 1v6.28c0 3.39-4.13 5.48-6 6.47-1.87-1-6-3.08-6-6.47V5z" />
     </svg>
 );
 
 const PriceTagIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+    <svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A1 1 0 012 10V5a1 1 0 011-1h5a1 1 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
     </svg>
 );
@@ -116,14 +116,21 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
                     <p className="text-xs text-gray-400">{new Date(item.created_at).toLocaleString()}</p>
                 </div>
               </div>
-              {itemIsRating && item.is_private && (
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-yellow-400 bg-yellow-900/50 px-2 py-1 rounded-full" title="This rating is private">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
-                    </svg>
-                    <span>Private</span>
-                </div>
-              )}
+              <div className="flex flex-col items-end gap-2">
+                 {itemIsRating ? (
+                    <span className="text-xs font-semibold text-yellow-300 bg-yellow-900/60 px-2.5 py-1 rounded-full">Rating</span>
+                 ) : (
+                    <span className="text-xs font-semibold text-blue-300 bg-blue-900/60 px-2.5 py-1 rounded-full">Post</span>
+                 )}
+                 {itemIsRating && item.is_private && (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-yellow-400" title="This rating is private">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                        </svg>
+                        <span>Private</span>
+                    </div>
+                )}
+              </div>
             </div>
             
             <div className="space-y-3">
