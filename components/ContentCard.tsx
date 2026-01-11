@@ -11,13 +11,13 @@ interface ContentCardProps {
 }
 
 const ShieldIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+    <svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
         <path d="M4 5a1 1 0 011-1h10a1 1 0 011 1v6.28c0 3.39-4.13 5.48-6 6.47-1.87-1-6-3.08-6-6.47V5z" />
     </svg>
 );
 
 const PriceTagIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+    <svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A1 1 0 012 10V5a1 1 0 011-1h5a1 1 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
     </svg>
 );
@@ -61,23 +61,34 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
   const itemIsRating = isRating(item);
 
   const getAvatarUrl = () => {
-    const avatarPath = user?.avatar_id;
-    const username = user?.username || item.id;
-    const fallbackUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(username)}`;
+    const profile = item.profiles;
+    const fallbackSeed = user?.username || item.id;
+    const fallbackUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(fallbackSeed)}`;
+
+    if (!profile) {
+        return fallbackUrl;
+    }
+
+    const avatarPath = profile.avatar_id;
 
     if (!avatarPath) {
         return fallbackUrl;
     }
+
     if (avatarPath.startsWith('http')) {
         return avatarPath;
     }
+
     try {
         const { data } = supabase.storage.from('avatars').getPublicUrl(avatarPath);
-        return data?.publicUrl || fallbackUrl;
+        if (data && data.publicUrl) {
+            return data.publicUrl;
+        }
     } catch (e) {
-        console.error("Error generating Supabase avatar URL:", e);
-        return fallbackUrl;
+        console.error("Error generating Supabase avatar URL, falling back.", e);
     }
+    
+    return fallbackUrl;
   }
 
   const currencySymbol = itemIsRating ? getCurrencySymbol(item.pubs?.country_code) : '';
@@ -118,10 +129,10 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
                     <div className="flex items-center gap-4 flex-wrap">
                         <RatingDisplay
                             icon={<ShieldIcon />}
-                            rating={item.quality / 2}
+                            rating={item.quality}
                             maxRating={5}
                             filledColor="text-yellow-400"
-                            title={`Quality: ${item.quality}/10`}
+                            title={`Quality: ${item.quality}/5`}
                         />
                          {item.price > 0 && (
                            <RatingDisplay
