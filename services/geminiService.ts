@@ -34,24 +34,27 @@ const analysisSchema = {
 const generatePrompt = (item: ContentItem): string => {
   const commonIntro = "You are a witty and sharp social media manager for 'Stoutly', a social network for Guinness lovers. Your goal is to find user-generated content that would perform well on platforms like Instagram and X (Twitter).";
   
+  const statsInfo = `\n- Likes: ${item.like_count}\n- Comments: ${item.comment_count}`;
+
   if (isRating(item)) {
+    const imageInfo = item.image_url ? "\n- Note: This rating includes a photo of the pint, making it great for visual platforms." : "";
     return `${commonIntro}
 
 Analyze the following Guinness rating:
 - User: ${item.profiles?.username || 'An anonymous user'}
 - Pub: ${item.pubs?.name || 'Unknown Pub'}
 - Rating: ${item.quality}/10
-- Review: "${item.message}"
+- Review: "${item.message}"${statsInfo}${imageInfo}
 
-Based on this, generate a social media post idea. Focus on what makes this review compelling, funny, or authentic.`;
+Based on this, generate a social media post idea. Focus on what makes this review compelling, funny, or authentic. Consider the engagement numbers and the presence of a photo.`;
   } else {
     return `${commonIntro}
 
 Analyze the following user post:
 - User: ${item.profiles?.username || 'An anonymous user'}
-- Post: "${item.content}"
+- Post: "${item.content}"${statsInfo}
 
-Based on this, generate a social media post idea. Look for humor, passion, or a great story.`;
+Based on this, generate a social media post idea. Look for humor, passion, or a great story. Consider the engagement numbers.`;
   }
 };
 

@@ -10,6 +10,9 @@ export interface Rating {
   created_at: string;
   quality: number;
   message: string;
+  image_url: string | null;
+  like_count: number;
+  comment_count: number;
   pubs: { name: string } | null;
   profiles: Profile | null;
 }
@@ -18,6 +21,8 @@ export interface Post {
   id: string;
   created_at: string;
   content: string;
+  like_count: number;
+  comment_count: number;
   profiles: Profile | null;
 }
 

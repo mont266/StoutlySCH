@@ -22,12 +22,12 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       const [ratingsRes, postsRes] = await Promise.all([
         supabase
           .from('ratings')
-          .select('id, created_at, quality, message, pubs(name), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
+          .select('id, created_at, quality, message, image_url, like_count, comment_count, pubs(name), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
           .order('created_at', { ascending: false })
           .limit(20),
         supabase
           .from('posts')
-          .select('id, created_at, content, profiles (username, avatar_id)')
+          .select('id, created_at, content, like_count, comment_count, profiles:profiles!posts_user_id_fkey(username, avatar_id)')
           .order('created_at', { ascending: false })
           .limit(20),
       ]);
@@ -35,9 +35,6 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       if (ratingsRes.error) throw ratingsRes.error;
       if (postsRes.error) throw postsRes.error;
 
-      // FIX: The Supabase query returns nested relations as arrays (e.g., `pubs`, `profiles`).
-      // The `Rating` type expects a single object or null. This map transforms the data
-      // by taking the first item from the nested array, aligning with the type definition.
       const ratings: Rating[] = (ratingsRes.data || []).map((r: any) => ({
         ...r,
         pubs: r.pubs?.[0] || null,
@@ -45,7 +42,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       }));
       const posts: Post[] = (postsRes.data || []).map((p: any) => ({
         ...p,
-        profiles: p.profiles?.[0] || null, // Posts might still return an array
+        profiles: p.profiles?.[0] || null, 
       }));
 
       const combinedContent = [...ratings, ...posts].sort(
@@ -53,7 +50,8 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       );
 
       setContent(combinedContent);
-    } catch (err: any) {
+    } catch (err: any)
+    {
       setError(err.message || 'Failed to fetch content.');
       console.error(err);
     } finally {
