@@ -35,8 +35,16 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       if (ratingsRes.error) throw ratingsRes.error;
       if (postsRes.error) throw postsRes.error;
 
-      const ratings: Rating[] = ratingsRes.data || [];
-      const posts: Post[] = postsRes.data || [];
+      // FIX: The Supabase query returns `profiles` as an array, while the app's `Rating` and `Post` types
+      // expect it to be a single `Profile` object. This transformation takes the first profile from the array.
+      const ratings: Rating[] = (ratingsRes.data || []).map((r: any) => ({
+        ...r,
+        profiles: r.profiles?.[0] || null,
+      }));
+      const posts: Post[] = (postsRes.data || []).map((p: any) => ({
+        ...p,
+        profiles: p.profiles?.[0] || null,
+      }));
 
       const combinedContent = [...ratings, ...posts].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

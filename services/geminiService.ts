@@ -1,11 +1,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type ContentItem, isRating, type SocialAnalysis } from '../types';
 
-// IMPORTANT: Add your Google Gemini API Key to your Netlify environment variables.
+// This variable is injected by the build process (e.g., Vite)
+// IMPORTANT: In your hosting provider (like Netlify), set the environment
+// variable as API_KEY.
+// FIX: Changed import.meta.env to process.env and used API_KEY as per guidelines.
 const apiKey = process.env.API_KEY;
 
 if (!apiKey) {
-  throw new Error("Google Gemini API key is required.");
+  throw new Error("Google Gemini API key is required. Make sure API_KEY is set in your environment.");
 }
 
 const ai = new GoogleGenAI({ apiKey });
