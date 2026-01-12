@@ -147,7 +147,7 @@ From the JSON object below, choose the ONE pint that has the most potential to g
 Here are the candidates:
 ${JSON.stringify(ratingsForPrompt, null, 2)}
 
-Respond with your choice in the specified JSON format. The 'id' in your response MUST be one of the keys from the JSON object I provided.`;
+Your task is to respond with a JSON object. The 'id' field in this object is the most critical part. It MUST be an exact, character-for-character copy of one of the keys from the JSON object I provided above. Do not modify, shorten, or invent an ID.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -166,6 +166,15 @@ Respond with your choice in the specified JSON format. The 'id' in your response
     const result = JSON.parse(jsonString);
 
     if (result && typeof result.id === 'string' && typeof result.analysis === 'string' && typeof result.socialScore === 'number') {
+      // VALIDATION STEP: Ensure the returned ID actually exists in our original list.
+      const isValidId = ratings.some(r => r.id === result.id);
+      if (!isValidId) {
+        console.error("Gemini returned a non-existent (hallucinated) ID.", {
+          returnedId: result.id,
+          validIds: ratings.map(r => r.id),
+        });
+        return null; // Fail gracefully if the ID is invalid
+      }
       return result as PintOfTheWeekAnalysis;
     }
     

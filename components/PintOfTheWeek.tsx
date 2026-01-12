@@ -51,15 +51,17 @@ const PintOfTheWeek: React.FC = () => {
       }
       setAnalysisResult(analysis);
 
-      const winner = ratings.find(r => r.id === analysis.id) as Rating | undefined;
+      // The ID from `analysis` is now guaranteed to be valid because of the check in `geminiService`
+      const winner = ratings.find(r => r.id === analysis.id);
       if (!winner) {
-        throw new Error("AI picked a winner, but we couldn't find the original rating.");
+        // This is now a very unlikely edge case
+        throw new Error("A critical error occurred. The AI's choice was validated but could not be found in the dataset.");
       }
-      setWinningPint(winner);
+      setWinningPint(winner as Rating);
 
       // Step 3: Generate sharable image
       setLoadingStep('Generating a custom social media graphic...');
-      const imageB64 = await createSharableImage(winner);
+      const imageB64 = await createSharableImage(winner as Rating);
       if (!imageB64) {
         throw new Error("Failed to generate the social media image.");
       }
@@ -83,7 +85,7 @@ const PintOfTheWeek: React.FC = () => {
       </div>
 
       {!analysisResult && !isLoading && !error && (
-        <div className="text-center">
+        <div className="flex justify-center">
           <Button onClick={handleFindPint} isLoading={isLoading} className="px-8 py-4 text-lg">
             Find Pint of the Week
           </Button>
