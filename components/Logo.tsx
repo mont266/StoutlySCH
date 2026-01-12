@@ -2,7 +2,12 @@ import React from 'react';
 
 const Logo: React.FC<{ className?: string }> = ({ className = 'w-12 h-12' }) => {
   return (
-    <svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg' className={className}>
+    <svg 
+      viewBox='0 0 100 100' 
+      xmlns='http://www.w3.org/2000/svg' 
+      className={`${className} [filter:drop-shadow(0_0_8px_rgba(168,85,247,0.7))_drop-shadow(0_0_15px_rgba(59,130,246,0.5))]`}
+      style={{ overflow: 'visible' }} // Ensure the glow isn't clipped by the SVG boundaries
+    >
       <g transform='translate(0 2)'>
         <path 
           d='M50 5 C 29.5 5, 12.5 22.5, 12.5 42.5 C 12.5 67.5, 50 95, 50 95 C 50 95, 87.5 67.5, 87.5 42.5 C 87.5 22.5, 70.5 5, 50 5 Z' 
