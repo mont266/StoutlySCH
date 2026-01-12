@@ -119,33 +119,35 @@ const pintOfTheWeekSchema = {
 
 export const findPintOfTheWeek = async (ratings: Rating[]): Promise<PintOfTheWeekAnalysis | null> => {
   try {
-    // Map to a structure that more closely resembles DB columns to avoid AI confusion.
-    const ratingsForPrompt = ratings.map(r => ({
-      id: r.id,
-      username: r.profiles?.username,
-      pub_name: r.pubs?.name,
-      quality: r.quality,
-      message: r.message,
-      like_count: r.like_count,
-      comment_count: r.comment_count,
-      has_image: !!r.image_url,
-    }));
+    // Use a dictionary/map with the ID as the key to make the AI's task more constrained
+    const ratingsForPrompt = ratings.reduce((acc, r) => {
+      acc[r.id] = {
+        username: r.profiles?.username,
+        pub_name: r.pubs?.name,
+        quality: r.quality,
+        message: r.message,
+        like_count: r.like_count,
+        comment_count: r.comment_count,
+        has_image: !!r.image_url,
+      };
+      return acc;
+    }, {} as Record<string, any>);
 
     const prompt = `You are a savvy social media expert for 'Stoutly', a Guinness lovers' social network. Your task is to select the "Pint of the Week".
 
-I will provide you with a JSON array of pints rated by our users in the last 7 days. Each object in the array has the following keys: 'id', 'username', 'pub_name', 'quality', 'message', 'like_count', 'comment_count', 'has_image'.
+I will provide you with a JSON object where each key is a unique rating ID, and the value is an object containing the rating details. The rating details object has the following keys: 'username', 'pub_name', 'quality', 'message', 'like_count', 'comment_count', 'has_image'.
 
 Analyze all of them based on the following criteria:
 1.  **Photo Quality**: The 'has_image' field being true is essential. The visual appeal is the most important factor.
 2.  **Review Authenticity & Vibe**: Does the 'message' sound genuine, witty, or heartfelt? Does the combination of the photo, review, and 'quality' rating create a compelling story?
 3.  **Rating & Engagement**: High 'quality' scores and strong 'like_count'/'comment_count' are a good indicator.
 
-From the list below, choose the ONE pint that has the most potential to go viral and represent our brand this week.
+From the JSON object below, choose the ONE pint that has the most potential to go viral and represent our brand this week.
 
-Here is the list of candidates:
+Here are the candidates:
 ${JSON.stringify(ratingsForPrompt, null, 2)}
 
-Respond with your choice in the specified JSON format, making sure the 'id' field exactly matches the 'id' of your chosen rating from the list.`;
+Respond with your choice in the specified JSON format. The 'id' in your response MUST be one of the keys from the JSON object I provided.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
