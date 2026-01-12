@@ -243,17 +243,28 @@ export const createSharableImage = async (rating: Rating): Promise<string | null
     return null;
   }
 
+  const qualityStars = '★'.repeat(rating.quality) + '☆'.repeat(5 - rating.quality);
+  const priceStars = rating.price > 0 ? '★'.repeat(rating.price) + '☆'.repeat(5 - rating.price) : '';
+
+  // This is the SVG code for the Stoutly logo, without the CSS glow effect.
+  const logoSvg = `<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><g transform='translate(0 2)'><path d='M50 5 C 29.5 5, 12.5 22.5, 12.5 42.5 C 12.5 67.5, 50 95, 50 95 C 50 95, 87.5 67.5, 87.5 42.5 C 87.5 22.5, 70.5 5, 50 5 Z' fill='#1A120F' stroke='#F59E0B' strokeWidth='4'/><path d='M25 45 C 40 30, 60 30, 75 45 C 75 35, 65 25, 50 25 C 35 25, 25 35, 25 45 Z' fill='#FDEED4'/></g></svg>`;
+
   const prompt = `You are a creative graphic designer for the 'Stoutly' social network.
 Take the provided image of a pint of Guinness and transform it into a vibrant, shareable social media graphic for our "Pint of the Week" feature.
 
-Your design MUST include:
+The final graphic MUST include the following elements, arranged in a clean, professional, and visually appealing layout:
 1. The original pint image as the main centerpiece.
 2. The text "Pint of the Week" in a stylish, bold, eye-catching font.
 3. The pub's name: "${rating.pubs?.name || 'A Fine Establishment'}"
 4. The user's username: "@${rating.profiles?.username || 'A Stout Lover'}"
-5. The "Stoutly" brand name or a stylized version of the name.
+5. Quality Rating: Visually represent this with stars: ${qualityStars}
+${priceStars ? `6. Value Rating: Visually represent this with stars: ${priceStars}` : ''}
+7. The Stoutly brand logo. Use this exact SVG code for the logo, placing it tastefully in a corner or near the brand name:
+   \`\`\`xml
+   ${logoSvg}
+   \`\`\`
 
-The overall aesthetic should be modern, engaging, and premium, with a dark theme complemented by gold or cream accents, echoing the iconic Guinness colors. Ensure the final image is a standard square social media post format (1:1 aspect ratio).`;
+The overall aesthetic should be modern, engaging, and premium, with a dark theme complemented by gold or cream accents, echoing the iconic Guinness colors. Ensure the final image is a standard square social media post format (1:1 aspect ratio). The layout should be clean and professional.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -268,6 +279,10 @@ The overall aesthetic should be modern, engaging, and premium, with a dark theme
           },
           { text: prompt },
         ],
+      },
+      config: {
+        // Add a seed for more consistent and deterministic image generation
+        seed: 42,
       },
     });
 
