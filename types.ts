@@ -42,6 +42,13 @@ export interface SocialAnalysis {
   hashtags: string[];
 }
 
+export interface PintOfTheWeekAnalysis {
+  id: string; // id of the winning rating
+  analysis: string;
+  socialScore: number;
+}
+
+
 export type AppUser = SupabaseUser;
 
 // Type guard to check if an item is a Rating

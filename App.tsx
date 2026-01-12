@@ -3,10 +3,13 @@ import { Session } from '@supabase/supabase-js';
 import { supabase } from './services/supabaseClient';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import Layout from './components/Layout';
+import PintOfTheWeek from './components/PintOfTheWeek';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState('dashboard');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -33,7 +36,14 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#111827]">
-      {!session ? <Login /> : <Dashboard key={session.user.id} session={session} />}
+      {!session ? (
+        <Login />
+      ) : (
+        <Layout page={page} setPage={setPage}>
+          {page === 'dashboard' && <Dashboard key={session.user.id} session={session} />}
+          {page === 'potw' && <PintOfTheWeek />}
+        </Layout>
+      )}
     </div>
   );
 };
