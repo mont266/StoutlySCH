@@ -45,27 +45,31 @@ const PintOfTheWeek: React.FC = () => {
 
       // Step 2: Get analysis from Gemini
       setLoadingStep('Analyzing pints with Gemini to find the winner...');
-      const analysis = await findPintOfTheWeek(ratings as Rating[]);
-      if (!analysis) {
-        throw new Error("AI analysis failed to determine a winner. Please try again.");
+      const analysisResponse = await findPintOfTheWeek(ratings as Rating[]);
+      
+      // FIX: Restructured to use an if/else block to ensure proper type narrowing for the discriminated union.
+      if (analysisResponse.success) {
+        const analysis = analysisResponse.data;
+        setAnalysisResult(analysis);
+  
+        // The ID from `analysis` is now guaranteed to be valid because of the check in `geminiService`
+        const winner = ratings.find(r => r.id === analysis.id);
+        if (!winner) {
+          // This is now a very unlikely edge case
+          throw new Error("A critical error occurred. The AI's choice was validated but could not be found in the dataset.");
+        }
+        setWinningPint(winner as Rating);
+  
+        // Step 3: Generate sharable image
+        setLoadingStep('Generating a custom social media graphic...');
+        const imageB64 = await createSharableImage(winner as Rating);
+        if (!imageB64) {
+          throw new Error("Failed to generate the social media image.");
+        }
+        setSharableImage(`data:image/png;base64,${imageB64}`);
+      } else {
+        throw new Error(analysisResponse.error);
       }
-      setAnalysisResult(analysis);
-
-      // The ID from `analysis` is now guaranteed to be valid because of the check in `geminiService`
-      const winner = ratings.find(r => r.id === analysis.id);
-      if (!winner) {
-        // This is now a very unlikely edge case
-        throw new Error("A critical error occurred. The AI's choice was validated but could not be found in the dataset.");
-      }
-      setWinningPint(winner as Rating);
-
-      // Step 3: Generate sharable image
-      setLoadingStep('Generating a custom social media graphic...');
-      const imageB64 = await createSharableImage(winner as Rating);
-      if (!imageB64) {
-        throw new Error("Failed to generate the social media image.");
-      }
-      setSharableImage(`data:image/png;base64,${imageB64}`);
 
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');

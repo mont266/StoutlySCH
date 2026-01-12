@@ -117,7 +117,7 @@ const pintOfTheWeekSchema = {
   required: ['id', 'analysis', 'socialScore'],
 };
 
-export const findPintOfTheWeek = async (ratings: Rating[]): Promise<PintOfTheWeekAnalysis | null> => {
+export const findPintOfTheWeek = async (ratings: Rating[]): Promise<{ success: true; data: PintOfTheWeekAnalysis } | { success: false; error: string }> => {
   try {
     // Use a dictionary/map with the ID as the key to make the AI's task more constrained
     const ratingsForPrompt = ratings.reduce((acc, r) => {
@@ -160,30 +160,42 @@ Your task is to respond with a JSON object. The 'id' field in this object is the
     
     const jsonString = response.text?.trim();
     if (!jsonString) {
-        console.error("Gemini API returned an empty response for Pint of the Week analysis.");
-        return null;
+        const errorMessage = "AI returned an empty or invalid response. This might be a temporary issue with the service.";
+        console.error(errorMessage);
+        return { success: false, error: errorMessage };
     }
-    const result = JSON.parse(jsonString);
+
+    let result;
+    try {
+        result = JSON.parse(jsonString);
+    } catch (parseError) {
+        const errorMessage = "AI returned a response that was not valid JSON. This is an API-side issue.";
+        console.error(errorMessage, { response: jsonString });
+        return { success: false, error: errorMessage };
+    }
 
     if (result && typeof result.id === 'string' && typeof result.analysis === 'string' && typeof result.socialScore === 'number') {
       // VALIDATION STEP: Ensure the returned ID actually exists in our original list.
       const isValidId = ratings.some(r => r.id === result.id);
       if (!isValidId) {
-        console.error("Gemini returned a non-existent (hallucinated) ID.", {
+        const errorMessage = `AI hallucinated a non-existent ID. It returned '${result.id}', which was not in the provided list.`;
+        console.error(errorMessage, {
           returnedId: result.id,
           validIds: ratings.map(r => r.id),
         });
-        return null; // Fail gracefully if the ID is invalid
+        return { success: false, error: errorMessage };
       }
-      return result as PintOfTheWeekAnalysis;
+      return { success: true, data: result as PintOfTheWeekAnalysis };
     }
     
-    console.error("Parsed JSON does not match PintOfTheWeekAnalysis schema:", result);
-    return null;
+    const schemaErrorMessage = "AI's response did not match the expected format. It returned a valid JSON object, but the structure was incorrect.";
+    console.error(schemaErrorMessage, { response: result });
+    return { success: false, error: schemaErrorMessage };
     
-  } catch (error) {
-    console.error("Error finding Pint of the Week:", error);
-    return null;
+  } catch (error: any) {
+    const apiErrorMessage = `An API error occurred while trying to find the Pint of the Week: ${error.message || 'Unknown error'}`;
+    console.error(apiErrorMessage, error);
+    return { success: false, error: apiErrorMessage };
   }
 };
 
