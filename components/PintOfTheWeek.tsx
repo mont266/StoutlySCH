@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { findPintOfTheWeek, createSharableImage } from '../services/geminiService';
+import { findPintOfTheWeek } from '../services/geminiService';
 import { type Rating, type PintOfTheWeekAnalysis } from '../types';
 import Button from './Button';
 import Spinner from './Spinner';
 import ContentCard from './ContentCard';
+import SharableImage from './SharableImage';
+import { toPng } from 'html-to-image';
 
 const PintOfTheWeek: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +15,9 @@ const PintOfTheWeek: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<PintOfTheWeekAnalysis | null>(null);
   const [winningPint, setWinningPint] = useState<Rating | null>(null);
   const [sharableImage, setSharableImage] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  
+  const imageRef = useRef<HTMLDivElement>(null);
 
   const handleReset = () => {
     setIsLoading(false);
@@ -21,7 +26,32 @@ const PintOfTheWeek: React.FC = () => {
     setAnalysisResult(null);
     setWinningPint(null);
     setSharableImage(null);
+    setIsGeneratingImage(false);
   };
+
+  useEffect(() => {
+    if (isGeneratingImage && imageRef.current) {
+      // Small timeout to ensure all assets (like the pint image) are loaded in the DOM
+      const timer = setTimeout(async () => {
+        try {
+          const dataUrl = await toPng(imageRef.current!, { 
+            quality: 0.98,
+            pixelRatio: 2, // Generate a higher resolution image
+            cacheBust: true,
+          });
+          setSharableImage(dataUrl);
+        } catch (err) {
+          console.error("Failed to generate image:", err);
+          setError("A client-side error occurred while generating the image. Please try again.");
+        } finally {
+          setIsLoading(false);
+          setLoadingStep('');
+          setIsGeneratingImage(false);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isGeneratingImage]);
 
   const handleFindPint = async () => {
     handleReset();
@@ -47,34 +77,26 @@ const PintOfTheWeek: React.FC = () => {
       setLoadingStep('Analyzing pints with Gemini to find the winner...');
       const analysisResponse = await findPintOfTheWeek(ratings as Rating[]);
       
-      // FIX: Use a guard clause to handle the failure case. This makes the type narrowing
-      // for the discriminated union more explicit and resolves the TypeScript error.
       if (analysisResponse.success === false) {
         throw new Error(analysisResponse.error);
       }
 
       const analysis = analysisResponse.data;
-      setAnalysisResult(analysis);
-
-      // The ID from `analysis` is now guaranteed to be valid because of the check in `geminiService`
       const winner = ratings.find(r => r.id === analysis.id);
+      
       if (!winner) {
-        // This is now a very unlikely edge case
         throw new Error("A critical error occurred. The AI's choice was validated but could not be found in the dataset.");
       }
+      
+      setAnalysisResult(analysis);
       setWinningPint(winner as Rating);
-
-      // Step 3: Generate sharable image
+      
+      // Step 3: Trigger client-side image generation
       setLoadingStep('Generating a custom social media graphic...');
-      const imageB64 = await createSharableImage(winner as Rating);
-      if (!imageB64) {
-        throw new Error("Failed to generate the social media image.");
-      }
-      setSharableImage(`data:image/png;base64,${imageB64}`);
+      setIsGeneratingImage(true);
 
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
-    } finally {
       setIsLoading(false);
       setLoadingStep('');
     }
@@ -82,6 +104,12 @@ const PintOfTheWeek: React.FC = () => {
 
   return (
     <main className="container mx-auto p-4 md:p-8">
+      {isGeneratingImage && winningPint && (
+        <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+          <SharableImage ref={imageRef} rating={winningPint} />
+        </div>
+      )}
+
       <div className="text-center mb-8">
         <h2 className="text-3xl sm:text-4xl font-bold text-white">Find the Pint of the Week</h2>
         <p className="text-gray-400 mt-2 max-w-2xl mx-auto">
@@ -123,7 +151,7 @@ const PintOfTheWeek: React.FC = () => {
                     <img src={sharableImage} alt="Sharable social media graphic for the pint of the week" className="rounded-md shadow-lg w-full aspect-square object-cover" />
                 ) : (
                     <div className="w-full aspect-square bg-gray-700 rounded-md flex items-center justify-center">
-                        <Spinner />
+                        <p className="text-gray-400">Finalizing image...</p>
                     </div>
                 )}
                 <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
