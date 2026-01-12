@@ -11,13 +11,13 @@ interface ContentCardProps {
 }
 
 const ShieldIcon = () => (
-    <svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
         <path d="M4 5a1 1 0 011-1h10a1 1 0 011 1v6.28c0 3.39-4.13 5.48-6 6.47-1.87-1-6-3.08-6-6.47V5z" />
     </svg>
 );
 
 const PriceTagIcon = () => (
-    <svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A1 1 0 012 10V5a1 1 0 011-1h5a1 1 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
     </svg>
 );
@@ -102,7 +102,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
             <img src={item.image_url} alt={`A pint of Guinness at ${item.pubs?.name || 'a pub'}`} className="w-full h-full object-contain" />
         </div>
       )}
-      <div className="p-5 flex-grow flex flex-col justify-between">
+      <div className="p-4 sm:p-5 flex-grow flex flex-col justify-between">
         <div>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center">
@@ -184,7 +184,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
         </div>
       </div>
       
-      <div className="p-5 bg-gray-900/50">
+      <div className="p-4 sm:p-5 bg-gray-900/50">
         {analysis && (
           <div className="mb-4 animate-fade-in">
             <h4 className="font-bold text-purple-400 text-lg mb-2">Social Angle</h4>

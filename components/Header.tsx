@@ -13,7 +13,10 @@ const Header: React.FC = () => {
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Logo className="w-10 h-10" />
-          <h1 className="text-xl md:text-2xl font-bold text-white">Stoutly Social Content Hub</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">
+            <span className="hidden md:inline">Stoutly Social Content Hub</span>
+            <span className="md:hidden">Social Hub</span>
+          </h1>
         </div>
         <Button onClick={handleLogout} className="text-sm px-3 py-1.5">
           Logout

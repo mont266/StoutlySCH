@@ -157,8 +157,8 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     <div className="min-h-screen bg-[#111827] text-gray-200">
       <Header />
       <main className="container mx-auto p-4 md:p-8">
-        <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-white">Latest Content Feed</h2>
+        <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">Latest Content Feed</h2>
             <Button onClick={handleRefresh} isLoading={isRefreshing} className="flex items-center gap-2 text-sm !py-1.5">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M20 4s0-2-2-2-2 2-2 2M4 20s0 2 2 2 2-2 2-2M20 12c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8" />
@@ -167,7 +167,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             </Button>
         </div>
 
-        <div className="bg-gray-800/50 rounded-lg p-4 mb-6 flex items-center justify-center gap-6 md:gap-8">
+        <div className="bg-gray-800/50 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-center gap-6 md:gap-8">
             <ToggleSwitch
                 id="show-ratings"
                 label="Show Ratings"
@@ -221,7 +221,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
       {showScrollTop && (
         <button
             onClick={scrollToTop}
-            className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-500 to-blue-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:from-purple-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-[#111827] z-20"
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 bg-gradient-to-r from-purple-500 to-blue-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:from-purple-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-[#111827] z-20"
             aria-label="Scroll to top"
         >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

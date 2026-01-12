@@ -62,10 +62,10 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#111827] p-4">
-      <div className="w-full max-w-md bg-[#1F2937] rounded-lg shadow-xl p-8 space-y-6">
+      <div className="w-full max-w-md bg-[#1F2937] rounded-lg shadow-xl p-6 sm:p-8 space-y-6">
         <div className="text-center">
           <Logo className="w-20 h-20 mx-auto" />
-          <h1 className="text-3xl font-bold text-white mt-4">Stoutly Social Content Hub</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mt-4">Stoutly Social Content Hub</h1>
           <p className="text-gray-400 mt-2">Sign in to continue</p>
         </div>
         <form className="space-y-6" onSubmit={handleLogin}>
