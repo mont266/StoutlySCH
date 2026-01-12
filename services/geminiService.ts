@@ -1,8 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type ContentItem, isRating, type SocialAnalysis, type Rating, type PintOfTheWeekAnalysis } from '../types';
 
-// The API key is injected from environment variables.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// The API key is injected from environment variables provided by Vite.
+// Ensure VITE_GEMINI_API_KEY is set in your environment.
+const geminiApiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
+
+if (!geminiApiKey) {
+  throw new Error("Gemini API key is required. Make sure VITE_GEMINI_API_KEY is set in your environment.");
+}
+
+const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
 const analysisSchema = {
   type: Type.OBJECT,
