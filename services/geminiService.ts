@@ -1,15 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type ContentItem, isRating, type SocialAnalysis, type Rating, type PintOfTheWeekAnalysis } from '../types';
 
-// The API key is injected from environment variables provided by Vite.
-// Ensure VITE_API_KEY is set in your environment.
-const geminiApiKey = (import.meta as any).env.VITE_API_KEY;
-
-if (!geminiApiKey) {
-  throw new Error("Gemini API key is required. Make sure VITE_API_KEY is set in your environment.");
-}
-
-const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+// FIX: Per @google/genai guidelines, API key must be from process.env.API_KEY
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const analysisSchema = {
   type: Type.OBJECT,
@@ -101,9 +94,9 @@ export const getSocialMediaAngle = async (item: ContentItem): Promise<SocialAnal
 const pintOfTheWeekSchema = {
   type: Type.OBJECT,
   properties: {
-    id: {
-      type: Type.STRING,
-      description: "The unique ID of the rating you have chosen as the Pint of the Week.",
+    winnerIndex: {
+      type: Type.INTEGER,
+      description: "The zero-based index of the winning rating from the array provided in the prompt.",
     },
     analysis: {
       type: Type.STRING,
@@ -114,40 +107,39 @@ const pintOfTheWeekSchema = {
       description: "A score from 0-100 representing its potential for social media engagement."
     },
   },
-  required: ['id', 'analysis', 'socialScore'],
+  required: ['winnerIndex', 'analysis', 'socialScore'],
 };
 
 export const findPintOfTheWeek = async (ratings: Rating[]): Promise<{ success: true; data: PintOfTheWeekAnalysis } | { success: false; error: string }> => {
   try {
-    // Use a dictionary/map with the ID as the key to make the AI's task more constrained
-    const ratingsForPrompt = ratings.reduce((acc, r) => {
-      acc[r.id] = {
-        username: r.profiles?.username,
-        pub_name: r.pubs?.name,
-        quality: r.quality,
-        message: r.message,
-        like_count: r.like_count,
-        comment_count: r.comment_count,
-        has_image: !!r.image_url,
-      };
-      return acc;
-    }, {} as Record<string, any>);
+    // We only need to send the relevant data for analysis, not the full object.
+    const ratingsForPrompt = ratings.map(r => ({
+      // The ID is still useful context for the AI, even if it doesn't return it.
+      id: r.id, 
+      username: r.profiles?.username,
+      pub_name: r.pubs?.name,
+      quality: r.quality,
+      message: r.message,
+      like_count: r.like_count,
+      comment_count: r.comment_count,
+      has_image: !!r.image_url,
+    }));
 
     const prompt = `You are a savvy social media expert for 'Stoutly', a Guinness lovers' social network. Your task is to select the "Pint of the Week".
 
-I will provide you with a JSON object where each key is a unique rating ID, and the value is an object containing the rating details. The rating details object has the following keys: 'username', 'pub_name', 'quality', 'message', 'like_count', 'comment_count', 'has_image'.
+I will provide you with a JSON array of objects. Each object represents a single Guinness rating.
 
 Analyze all of them based on the following criteria:
 1.  **Photo Quality**: The 'has_image' field being true is essential. The visual appeal is the most important factor.
 2.  **Review Authenticity & Vibe**: Does the 'message' sound genuine, witty, or heartfelt? Does the combination of the photo, review, and 'quality' rating create a compelling story?
 3.  **Rating & Engagement**: High 'quality' scores and strong 'like_count'/'comment_count' are a good indicator.
 
-From the JSON object below, choose the ONE pint that has the most potential to go viral and represent our brand this week.
+From the JSON array below, choose the ONE pint that has the most potential to go viral and represent our brand this week.
 
 Here are the candidates:
 ${JSON.stringify(ratingsForPrompt, null, 2)}
 
-Your task is to respond with a JSON object. The 'id' field in this object is the most critical part. It MUST be an exact, character-for-character copy of one of the keys from the JSON object I provided above. Do not modify, shorten, or invent an ID.`;
+Your task is to respond with a JSON object. The 'winnerIndex' field in your response is the most critical part. It MUST be the zero-based index of the rating you chose from the array I provided. For example, if you choose the first rating in the array, return 0. If you choose the third, return 2.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -174,18 +166,29 @@ Your task is to respond with a JSON object. The 'id' field in this object is the
         return { success: false, error: errorMessage };
     }
 
-    if (result && typeof result.id === 'string' && typeof result.analysis === 'string' && typeof result.socialScore === 'number') {
-      // VALIDATION STEP: Ensure the returned ID actually exists in our original list.
-      const isValidId = ratings.some(r => r.id === result.id);
-      if (!isValidId) {
-        const errorMessage = `AI hallucinated a non-existent ID. It returned '${result.id}', which was not in the provided list.`;
+    if (result && typeof result.winnerIndex === 'number' && typeof result.analysis === 'string' && typeof result.socialScore === 'number') {
+      const winnerIndex = result.winnerIndex;
+
+      // VALIDATION STEP: Ensure the returned index is within the bounds of the original array.
+      if (winnerIndex < 0 || winnerIndex >= ratings.length) {
+        const errorMessage = `AI returned an invalid index. It returned '${winnerIndex}', which is outside the bounds of the provided list (0-${ratings.length - 1}).`;
         console.error(errorMessage, {
-          returnedId: result.id,
-          validIds: ratings.map(r => r.id),
+          returnedIndex: winnerIndex,
+          listSize: ratings.length,
         });
         return { success: false, error: errorMessage };
       }
-      return { success: true, data: result as PintOfTheWeekAnalysis };
+      
+      const winningRating = ratings[winnerIndex];
+      
+      // Construct the final analysis object with the correct ID.
+      const finalAnalysis: PintOfTheWeekAnalysis = {
+        id: winningRating.id,
+        analysis: result.analysis,
+        socialScore: result.socialScore,
+      };
+
+      return { success: true, data: finalAnalysis };
     }
     
     const schemaErrorMessage = "AI's response did not match the expected format. It returned a valid JSON object, but the structure was incorrect.";
