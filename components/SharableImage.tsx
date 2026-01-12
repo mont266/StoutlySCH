@@ -6,10 +6,11 @@ interface SharableImageProps {
   rating: Rating;
 }
 
+// Star component with updated colors to match the brand palette
 const Star: React.FC<{ filled: boolean }> = ({ filled }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className={`h-8 w-8 ${filled ? 'text-yellow-400' : 'text-gray-500'}`}
+    className={`h-6 w-6 ${filled ? 'text-amber-500' : 'text-gray-600'}`}
     viewBox="0 0 20 20"
     fill="currentColor"
   >
@@ -23,58 +24,60 @@ const SharableImage = forwardRef<HTMLDivElement, SharableImageProps>(({ rating }
   return (
     <div
       ref={ref}
-      className="w-[600px] h-[600px] bg-gray-900 text-white relative overflow-hidden font-sans"
-      style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"' }}
+      className="w-[600px] h-[600px] text-stone-200 relative overflow-hidden font-sans p-8 flex flex-col"
+      style={{
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+        backgroundColor: '#1A120F' // Brand's dark charcoal color
+      }}
     >
-      <img
-        src={rating.image_url}
-        crossOrigin="anonymous"
-        className="absolute inset-0 w-full h-full object-cover"
-        alt={`Pint at ${rating.pubs?.name}`}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
-      <div className="absolute inset-0 p-8 flex flex-col justify-between">
-        {/* Top Section */}
-        <div className="flex justify-between items-start">
-          <h1
-            className="text-5xl font-extrabold text-white tracking-tight"
-            style={{ textShadow: '2px 2px 8px rgba(0,0,0,0.8)' }}
-          >
-            Pint of the Week
-          </h1>
-          <Logo className="w-20 h-20" />
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-5xl font-extrabold tracking-wider uppercase text-amber-500">
+            Pint <span className="font-light text-3xl text-stone-300">of the</span> Week
+        </h1>
+      </div>
+
+      {/* Image with overlayed text */}
+      <div className="relative my-4 flex-grow w-full rounded-lg shadow-lg border-2 border-amber-500/50">
+        <img
+            src={rating.image_url}
+            crossOrigin="anonymous"
+            className="w-full h-full object-cover rounded"
+            alt={`Pint at ${rating.pubs?.name}`}
+        />
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4 rounded-b">
+             <h2 className="text-3xl font-bold text-white truncate" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.7)' }}>{rating.pubs?.name || 'A Fine Establishment'}</h2>
+             <p className="text-lg text-stone-300" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.7)' }}>by @{rating.profiles?.username || 'A Stout Lover'}</p>
         </div>
+      </div>
 
-        {/* Bottom Section */}
-        <div className="space-y-4">
-          <div
-            className="bg-black/50 backdrop-blur-sm p-4 rounded-lg"
-            style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.5)' }}
-          >
-            <h2 className="text-3xl font-bold text-white truncate">{rating.pubs?.name || 'A Fine Establishment'}</h2>
-            <p className="text-xl text-gray-300">by @{rating.profiles?.username || 'A Stout Lover'}</p>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="bg-black/50 backdrop-blur-sm p-3 rounded-lg flex-1">
-              <h3 className="text-base font-semibold text-gray-300 uppercase tracking-wider">Quality</h3>
-              <div className="flex items-center mt-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} filled={i < rating.quality} />
-                ))}
-              </div>
+      {/* Ratings & Footer */}
+      <div className="flex justify-between items-center">
+        <div className="flex gap-4">
+             <div>
+                <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Quality</h3>
+                <div className="flex items-center mt-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={`q-${i}`} filled={i < rating.quality} />
+                    ))}
+                </div>
             </div>
             {rating.price > 0 && (
-              <div className="bg-black/50 backdrop-blur-sm p-3 rounded-lg flex-1">
-                <h3 className="text-base font-semibold text-gray-300 uppercase tracking-wider">Value</h3>
+            <div>
+                <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Value</h3>
                 <div className="flex items-center mt-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} filled={i < rating.price} />
-                  ))}
+                    {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={`v-${i}`} filled={i < rating.price} />
+                    ))}
                 </div>
-              </div>
+            </div>
             )}
-          </div>
+        </div>
+        <div className="text-right">
+            <Logo className="w-14 h-14 ml-auto" />
+            <p className="text-xs text-stone-500 mt-1 font-mono">
+                www.stoutly.co.uk
+            </p>
         </div>
       </div>
     </div>
