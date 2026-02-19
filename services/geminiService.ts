@@ -117,6 +117,26 @@ const pintOfTheWeekSchema = {
   required: ['winnerIndex', 'analysis', 'socialScore'],
 };
 
+export const generateLeaderboardPost = async (users: any[]): Promise<string | null> => {
+  try {
+    const prompt = `You are a social media manager for 'Stoutly'. Create a fun and engaging social media post that highlights the top 10 users of the week. Here are the users:\n\n${JSON.stringify(users, null, 2)}\n\nCreate a post that is ready to be copied and pasted.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        temperature: 0.8,
+      },
+    });
+
+    return response.text?.trim() || null;
+
+  } catch (error) {
+    console.error("Error generating leaderboard post:", error);
+    return null;
+  }
+};
+
 export const findPintOfTheWeek = async (ratings: Rating[]): Promise<{ success: true; data: PintOfTheWeekAnalysis } | { success: false; error: string }> => {
   try {
     // We only need to send the relevant data for analysis, not the full object.

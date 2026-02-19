@@ -36,7 +36,7 @@ const PintOfTheWeek: React.FC = () => {
         try {
           const dataUrl = await toPng(imageRef.current!, { 
             quality: 0.98,
-            pixelRatio: 2, // Generate a higher resolution image
+            pixelRatio: 2, // Generate a higher resolution image (600px * 2 = 1200px)
             cacheBust: true,
           });
           setSharableImage(dataUrl);
@@ -148,7 +148,7 @@ const PintOfTheWeek: React.FC = () => {
             <div className="bg-gray-800/50 rounded-lg p-6 text-center sticky top-24">
                  <h3 className="text-2xl font-bold text-white mb-4">Your Sharable Image</h3>
                 {sharableImage ? (
-                    <img src={sharableImage} alt="Sharable social media graphic for the pint of the week" className="rounded-md shadow-lg w-full aspect-square object-cover" />
+                    <img src={sharableImage} alt="Sharable social media graphic for the pint of the week" className="rounded-md shadow-lg w-full aspect-square object-contain" />
                 ) : (
                     <div className="w-full aspect-square bg-gray-700 rounded-md flex items-center justify-center">
                         <p className="text-gray-400">Finalizing image...</p>

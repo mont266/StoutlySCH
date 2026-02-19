@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Layout from './components/Layout';
 import PintOfTheWeek from './components/PintOfTheWeek';
+import Leaderboard from './components/Leaderboard';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -42,6 +43,7 @@ const App: React.FC = () => {
         <Layout page={page} setPage={setPage}>
           {page === 'dashboard' && <Dashboard key={session.user.id} session={session} />}
           {page === 'potw' && <PintOfTheWeek />}
+          {page === 'leaderboard' && <Leaderboard />}
         </Layout>
       )}
     </div>

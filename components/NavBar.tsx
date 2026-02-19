@@ -17,6 +17,12 @@ const StarIcon = ({ isActive }: { isActive: boolean }) => (
   </svg>
 );
 
+const LeaderboardIcon = ({ isActive }: { isActive: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+);
+
 
 const NavItem = ({ label, id, activeTab, onTabChange, children }: any) => {
     const isActive = activeTab === id;
@@ -52,7 +58,8 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, onTabChange }) => {
         <div className="container mx-auto px-8 py-2">
           <div className="flex items-center space-x-4">
             <NavItem label="Content Feed" id="dashboard" activeTab={activeTab} onTabChange={onTabChange} />
-            <NavItem label="Pint of the Week" id="potw" activeTab={activeTab} onTabChange={onTabChange} />
+                        <NavItem label="Pint of the Week" id="potw" activeTab={activeTab} onTabChange={onTabChange} />
+            <NavItem label="Leaderboard" id="leaderboard" activeTab={activeTab} onTabChange={onTabChange} />
           </div>
         </div>
       </nav>
@@ -65,6 +72,9 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, onTabChange }) => {
             </NavItem>
             <NavItem label="Pint of Week" id="potw" activeTab={activeTab} onTabChange={onTabChange}>
                 <StarIcon isActive={activeTab === 'potw'} />
+            </NavItem>
+            <NavItem label="Leaderboard" id="leaderboard" activeTab={activeTab} onTabChange={onTabChange}>
+                <LeaderboardIcon isActive={activeTab === 'leaderboard'} />
             </NavItem>
         </div>
       </nav>
