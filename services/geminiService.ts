@@ -117,9 +117,17 @@ const pintOfTheWeekSchema = {
   required: ['winnerIndex', 'analysis', 'socialScore'],
 };
 
-export const generateLeaderboardPost = async (users: any[]): Promise<string | null> => {
+export const generateWeeklySummary = async (data: { topUsers: any[], newUsersCount: number, newPosts: any[] }): Promise<string | null> => {
   try {
-    const prompt = `You are a social media manager for 'Stoutly'. Create a fun and engaging social media post that highlights the top 10 users of the week. Here are the users:\n\n${JSON.stringify(users, null, 2)}\n\nCreate a post that is ready to be copied and pasted.`;
+    const prompt = `You are a witty and sharp social media manager for 'Stoutly', a social network for Guinness lovers. 
+    Your goal is to generate a brief, engaging summary for our weekly leaderboard graphic.
+
+    Here's the data for the past 7 days:
+    - Top 5 Most Active Users: ${JSON.stringify(data.topUsers.map(u => u.username))}
+    - New Members Joined: ${data.newUsersCount}
+    - A few posts from newcomers: ${JSON.stringify(data.newPosts.map(p => p.content))}
+
+    Based on this, write a short, celebratory summary (2-3 sentences). Be enthusiastic and welcoming. For example: "What a week! Huge congrats to our top contributors like ${data.topUsers[0]?.username} for leading the charge. We also welcomed ${data.newUsersCount} new faces to the Stoutly family. Cheers to another great week!"`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -132,7 +140,7 @@ export const generateLeaderboardPost = async (users: any[]): Promise<string | nu
     return response.text?.trim() || null;
 
   } catch (error) {
-    console.error("Error generating leaderboard post:", error);
+    console.error("Error generating weekly summary:", error);
     return null;
   }
 };
