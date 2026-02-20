@@ -20,43 +20,52 @@ const Leaderboard: React.FC = () => {
       try {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-        // Define RPC functions in Supabase
-        const ddl = `
-        create or replace function get_top_users(since timestamptz) returns table(user_id uuid, username text, post_count bigint) as $$
-          select p.user_id, pr.username, count(*) as post_count from posts p join profiles pr on p.user_id = pr.id where p.created_at >= since group by p.user_id, pr.username order by post_count desc limit 5;
-        $$ language sql;
-
-        create or replace function get_new_user_posts(since timestamptz) returns table(id uuid, content text) as $$
-          select p.id, p.content from posts p join profiles pr on p.user_id = pr.id where pr.created_at >= since order by p.created_at desc limit 3;
-        $$ language sql;
-        `;
-        await supabase.rpc('eval', { query: ddl });
-
-        // Fetch top 5 users
-        const { data: topUsersData, error: topUsersError } = await supabase
-          .rpc('get_top_users', { since: sevenDaysAgo });
-
-        if (topUsersError) throw new Error(topUsersError.message);
-        setTopUsers(topUsersData);
-
-        // Fetch new users count
-        const { count: newUsersCountData, error: newUsersError } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact' })
+        // Fetch all posts and profiles from the last 7 days
+        const { data: posts, error: postsError } = await supabase
+          .from('posts')
+          .select('*, profiles(*)')
           .gte('created_at', sevenDaysAgo);
 
-        if (newUsersError) throw new Error(newUsersError.message);
-        setNewUsersCount(newUsersCountData || 0);
+        if (postsError) throw new Error(postsError.message);
 
-        // Fetch posts from new users
-        const { data: newPostsData, error: newPostsError } = await supabase
-          .rpc('get_new_user_posts', { since: sevenDaysAgo });
+        const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*')
+            .gte('created_at', sevenDaysAgo);
 
-        if (newPostsError) throw new Error(newPostsError.message);
+        if (profilesError) throw new Error(profilesError.message);
+
+        // Calculate top users
+        const userPostCounts = posts.reduce((acc, post) => {
+          acc[post.user_id] = (acc[post.user_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const sortedUsers = Object.keys(userPostCounts).sort((a, b) => userPostCounts[b] - userPostCounts[a]);
+        const topUsersData = sortedUsers.slice(0, 5).map(userId => {
+            const userProfile = posts.find(p => p.user_id === userId)?.profiles;
+            return {
+                user_id: userId,
+                username: userProfile?.username || 'Unknown',
+                post_count: userPostCounts[userId]
+            }
+        });
+        setTopUsers(topUsersData);
+
+        // Get new users count
+        setNewUsersCount(profiles.length);
+
+        // Get posts from new users
+        const newUserIds = new Set(profiles.map(p => p.id));
+        const newPostsData = posts.filter(p => newUserIds.has(p.user_id)).slice(0, 3);
         setNewPosts(newPostsData);
 
         // Generate summary
-        const summaryText = await generateWeeklySummary({ topUsers: topUsersData, newUsersCount: newUsersCountData || 0, newPosts: newPostsData });
+        const summaryText = await generateWeeklySummary({ 
+            topUsers: topUsersData, 
+            newUsersCount: profiles.length, 
+            newPosts: newPostsData 
+        });
         setSummary(summaryText);
 
       } catch (err: any) {
