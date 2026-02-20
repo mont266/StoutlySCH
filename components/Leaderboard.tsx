@@ -23,7 +23,7 @@ const Leaderboard: React.FC = () => {
         // Fetch all posts and profiles from the last 7 days
         const { data: posts, error: postsError } = await supabase
           .from('posts')
-          .select('*, profiles(*)')
+          .select('*, profiles!posts_user_id_fkey(*)')
           .gte('created_at', sevenDaysAgo);
 
         if (postsError) throw new Error(postsError.message);

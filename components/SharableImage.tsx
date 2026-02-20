@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { type Rating } from '../types';
 import Logo from './Logo';
+import { formatCurrency } from '../utils/currency';
 
 interface SharableImageProps {
   rating: Rating;
@@ -24,7 +25,7 @@ const SharableImage = forwardRef<HTMLDivElement, SharableImageProps>(({ rating }
   return (
     <div
       ref={ref}
-      className="w-[600px] h-[600px] text-stone-200 relative overflow-hidden font-sans p-8 flex flex-col"
+      className="w-[600px] bg-[#1A120F] text-stone-200 relative font-sans p-8 flex flex-col"
       style={{
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
         backgroundColor: '#1A120F' // Brand's dark charcoal color
@@ -71,6 +72,12 @@ const SharableImage = forwardRef<HTMLDivElement, SharableImageProps>(({ rating }
                     ))}
                 </div>
             </div>
+            )}
+            {rating.exact_price && (
+                <div>
+                    <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Price</h3>
+                    <p className="text-2xl font-bold text-white mt-1">{formatCurrency(rating.exact_price, rating.pubs?.country_code)}</p>
+                </div>
             )}
         </div>
         <div className="text-right">

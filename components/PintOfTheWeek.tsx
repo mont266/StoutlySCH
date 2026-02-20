@@ -16,8 +16,16 @@ const PintOfTheWeek: React.FC = () => {
   const [winningPint, setWinningPint] = useState<Rating | null>(null);
   const [sharableImage, setSharableImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [previousPints, setPreviousPints] = useState<any[]>([]);
   
   const imageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const savedPints = localStorage.getItem('pintOfTheWeekHistory');
+    if (savedPints) {
+      setPreviousPints(JSON.parse(savedPints));
+    }
+  }, []);
 
   const handleReset = () => {
     setIsLoading(false);
@@ -40,6 +48,22 @@ const PintOfTheWeek: React.FC = () => {
             cacheBust: true,
           });
           setSharableImage(dataUrl);
+
+          // Save the complete result including the image to local storage
+          if (analysisResult && winningPint) {
+            const newHistory = [
+              {
+                analysis: analysisResult,
+                winner: winningPint,
+                sharableImage: dataUrl,
+                date: new Date().toISOString(),
+              },
+              ...previousPints.filter(p => p.winner.id !== winningPint.id),
+            ].slice(0, 5);
+
+            localStorage.setItem('pintOfTheWeekHistory', JSON.stringify(newHistory));
+            setPreviousPints(newHistory);
+          }
         } catch (err) {
           console.error("Failed to generate image:", err);
           setError("A client-side error occurred while generating the image. Please try again.");
@@ -64,7 +88,7 @@ const PintOfTheWeek: React.FC = () => {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: ratings, error: dbError } = await supabase
         .from('ratings')
-        .select('id, created_at, quality, message, image_url, like_count, comment_count, price, is_private, exact_price, pubs(name, lng, lat, country_code), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
+        .select('id, created_at, quality, message, image_url, like_count, comment_count, price, is_private, exact_price, pubs!ratings_pub_id_fkey(name, lng, lat, country_code), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
         .gte('created_at', sevenDaysAgo)
         .not('image_url', 'is', null);
 
@@ -90,6 +114,8 @@ const PintOfTheWeek: React.FC = () => {
       
       setAnalysisResult(analysis);
       setWinningPint(winner as Rating);
+
+      
       
       // Step 3: Trigger client-side image generation
       setLoadingStep('Generating a custom social media graphic...');
@@ -118,10 +144,20 @@ const PintOfTheWeek: React.FC = () => {
       </div>
 
       {!analysisResult && !isLoading && !error && (
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-4">
           <Button onClick={handleFindPint} isLoading={isLoading} className="px-8 py-4 text-lg">
             Find Pint of the Week
           </Button>
+          {previousPints.length > 0 && (
+            <Button onClick={() => {
+              const latest = previousPints[0];
+              setAnalysisResult(latest.analysis);
+              setWinningPint(latest.winner);
+              setSharableImage(latest.sharableImage);
+            }} className="px-8 py-4 text-lg bg-gray-600 hover:bg-gray-700 from-transparent to-transparent">
+              View Latest Saved
+            </Button>
+          )}
         </div>
       )}
       
@@ -148,7 +184,7 @@ const PintOfTheWeek: React.FC = () => {
             <div className="bg-gray-800/50 rounded-lg p-6 text-center sticky top-24">
                  <h3 className="text-2xl font-bold text-white mb-4">Your Sharable Image</h3>
                 {sharableImage ? (
-                    <img src={sharableImage} alt="Sharable social media graphic for the pint of the week" className="rounded-md shadow-lg w-full aspect-square object-contain" />
+                    <img src={sharableImage} alt="Sharable social media graphic for the pint of the week" className="rounded-md shadow-lg w-full h-auto" />
                 ) : (
                     <div className="w-full aspect-square bg-gray-700 rounded-md flex items-center justify-center">
                         <p className="text-gray-400">Finalizing image...</p>
@@ -193,6 +229,34 @@ const PintOfTheWeek: React.FC = () => {
                         <ContentCard item={winningPint} />
                     </div>
                 </div>
+            </div>
+        </div>
+      )}
+          {previousPints.length > 0 && !analysisResult && (
+        <div className="mt-12">
+            <h3 className="text-2xl font-bold text-white text-center mb-4">Previously Saved Pints</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {previousPints.map((pint, index) => (
+                    <div key={index} className="bg-gray-800/50 rounded-lg p-4 relative">
+                        <div className="cursor-pointer" onClick={() => {
+                            setAnalysisResult(pint.analysis);
+                            setWinningPint(pint.winner);
+                            setSharableImage(pint.sharableImage);
+                        }}>
+                            <ContentCard item={pint.winner} />
+                            <p className="text-sm text-gray-400 mt-2 text-center">Generated on {new Date(pint.date).toLocaleDateString()}</p>
+                        </div>
+                        <button onClick={() => {
+                            const newHistory = previousPints.filter((_, i) => i !== index);
+                            localStorage.setItem('pintOfTheWeekHistory', JSON.stringify(newHistory));
+                            setPreviousPints(newHistory);
+                        }} className="absolute top-2 right-2 bg-red-500/50 text-white rounded-full p-1 hover:bg-red-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                ))}
             </div>
         </div>
       )}
