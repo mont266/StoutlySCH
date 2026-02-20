@@ -23,6 +23,7 @@ const App: React.FC = () => {
       setSession(session);
 
       if (session?.user) {
+        console.log('Checking user profile for ID:', session.user.id);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -30,6 +31,7 @@ const App: React.FC = () => {
           .single();
 
         if (data) {
+          console.log('Found user profile:', data);
           const userProfile: Profile = data;
           setProfile(userProfile);
           if (userProfile.is_team_member || userProfile.is_developer) {
@@ -38,6 +40,7 @@ const App: React.FC = () => {
             setAuthorized(false);
           }
         } else {
+          console.error('Could not find a profile for the user.');
           setAuthorized(false);
         }
       } else {
