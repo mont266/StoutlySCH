@@ -18,20 +18,21 @@ const App: React.FC = () => {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    setLoading(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
 
       if (session?.user) {
-        console.log('Checking user profile for ID:', session.user.id);
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('is_team_member, is_developer')
           .eq('id', session.user.id)
           .single();
 
-        if (data) {
-          console.log('Found user profile:', data);
+        if (error) {
+          console.error('Error fetching profile:', error.message);
+          setAuthorized(false);
+        } else if (data) {
           const userProfile: Profile = data;
           setProfile(userProfile);
           if (userProfile.is_team_member || userProfile.is_developer) {
@@ -40,26 +41,19 @@ const App: React.FC = () => {
             setAuthorized(false);
           }
         } else {
-          console.error('Could not find a profile for the user.');
+          // No profile found for user
           setAuthorized(false);
         }
       } else {
-        setAuthorized(false);
-      }
-      setLoading(false);
-    };
-
-    checkUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (!session) {
         setProfile(null);
         setAuthorized(false);
       }
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
