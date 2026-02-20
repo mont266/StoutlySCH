@@ -3,6 +3,8 @@ import { type User as SupabaseUser } from '@supabase/supabase-js';
 export interface Profile {
   username: string;
   avatar_id: string;
+  is_team_member?: boolean;
+  is_developer?: boolean;
 }
 
 export interface Rating {

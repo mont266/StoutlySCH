@@ -6,6 +6,7 @@ import Logo from './Logo';
 
 const Leaderboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [topUsers, setTopUsers] = useState<any[]>([]);
@@ -16,26 +17,21 @@ const Leaderboard: React.FC = () => {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
-
       try {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-        // Fetch all posts and profiles from the last 7 days
         const { data: posts, error: postsError } = await supabase
           .from('posts')
           .select('*, profiles!posts_user_id_fkey(*)')
           .gte('created_at', sevenDaysAgo);
-
         if (postsError) throw new Error(postsError.message);
 
         const { data: profiles, error: profilesError } = await supabase
-            .from('profiles')
-            .select('*')
-            .gte('created_at', sevenDaysAgo);
-
+          .from('profiles')
+          .select('*')
+          .gte('created_at', sevenDaysAgo);
         if (profilesError) throw new Error(profilesError.message);
 
-        // Calculate top users
         const userPostCounts = posts.reduce((acc, post) => {
           acc[post.user_id] = (acc[post.user_id] || 0) + 1;
           return acc;
@@ -43,30 +39,20 @@ const Leaderboard: React.FC = () => {
 
         const sortedUsers = Object.keys(userPostCounts).sort((a, b) => userPostCounts[b] - userPostCounts[a]);
         const topUsersData = sortedUsers.slice(0, 5).map(userId => {
-            const userProfile = posts.find(p => p.user_id === userId)?.profiles;
-            return {
-                user_id: userId,
-                username: userProfile?.username || 'Unknown',
-                post_count: userPostCounts[userId]
-            }
+          const userProfile = posts.find(p => p.user_id === userId)?.profiles;
+          return {
+            user_id: userId,
+            username: userProfile?.username || 'Unknown',
+            post_count: userPostCounts[userId]
+          };
         });
         setTopUsers(topUsersData);
 
-        // Get new users count
         setNewUsersCount(profiles.length);
 
-        // Get posts from new users
         const newUserIds = new Set(profiles.map(p => p.id));
         const newPostsData = posts.filter(p => newUserIds.has(p.user_id)).slice(0, 3);
         setNewPosts(newPostsData);
-
-        // Generate summary
-        const summaryText = await generateWeeklySummary({ 
-            topUsers: topUsersData, 
-            newUsersCount: profiles.length, 
-            newPosts: newPostsData 
-        });
-        setSummary(summaryText);
 
       } catch (err: any) {
         setError(err.message || 'An unexpected error occurred.');
@@ -77,6 +63,23 @@ const Leaderboard: React.FC = () => {
 
     fetchData();
   }, []);
+
+  const handleGenerateSummary = async () => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const summaryText = await generateWeeklySummary({ 
+          topUsers, 
+          newUsersCount, 
+          newPosts 
+      });
+      setSummary(summaryText);
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate summary.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <main className="container mx-auto p-4 md:p-8 flex justify-center items-center">
@@ -89,7 +92,15 @@ const Leaderboard: React.FC = () => {
             <Logo />
           </div>
 
-          <p className="text-lg text-gray-300 mb-8">{summary}</p>
+          {summary ? (
+            <p className="text-lg text-gray-300 mb-8 animate-fade-in">{summary}</p>
+          ) : (
+            <div className="text-center mb-8">
+              <button onClick={handleGenerateSummary} disabled={isGenerating} className="px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isGenerating ? <Spinner /> : 'Generate Weekly Summary'}
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>

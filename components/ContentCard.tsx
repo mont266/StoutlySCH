@@ -158,7 +158,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
                     <div className="text-gray-300">
                         Rated at <span className="font-semibold text-white">{item.pubs?.name || 'a pub'}</span>
                         {item.exact_price && currencySymbol && (
-                            <span className="ml-2 text-sm text-green-400 font-mono">({currencySymbol}{item.exact_price.toFixed(2)})</span>
+                            <span className="ml-2 text-lg font-bold text-green-400">{currencySymbol}{item.exact_price.toFixed(2)}</span>
                         )}
                     </div>
                 )}
