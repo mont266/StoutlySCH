@@ -26,15 +26,86 @@ const PriceTagIcon = () => (
 const getCurrencySymbol = (countryCode: string | null | undefined): string => {
     if (!countryCode) return '';
     switch (countryCode.toUpperCase()) {
-        case 'GB':
+        // North America
+        case 'US': // United States
+        case 'CA': // Canada
+        case 'MX': // Mexico
+        case 'BZ': // Belize
+        case 'SV': // El Salvador
+        case 'PA': // Panama
+        case 'EC': // Ecuador (uses USD)
+            return '$';
+        case 'CR': return '₡'; // Costa Rica
+        case 'GT': return 'Q'; // Guatemala
+        case 'HN': return 'L'; // Honduras
+        case 'NI': return 'C$'; // Nicaragua
+
+        // South America
+        case 'AR': // Argentina
+        case 'CL': // Chile
+        case 'CO': // Colombia
+        case 'UY': // Uruguay
+            return '$';
+        case 'BO': return 'Bs.'; // Bolivia
+        case 'BR': return 'R$'; // Brazil
+        case 'PY': return '₲'; // Paraguay
+        case 'PE': return 'S/'; // Peru
+        case 'VE': return 'Bs.'; // Venezuela
+
+        // Europe - Eurozone
+        case 'AD': // Andorra
+        case 'AT': // Austria
+        case 'BE': // Belgium
+        case 'CY': // Cyprus
+        case 'EE': // Estonia
+        case 'FI': // Finland
+        case 'FR': // France
+        case 'DE': // Germany
+        case 'GR': // Greece
+        case 'IE': // Ireland
+        case 'IT': // Italy
+        case 'LV': // Latvia
+        case 'LT': // Lithuania
+        case 'LU': // Luxembourg
+        case 'MT': // Malta
+        case 'MC': // Monaco
+        case 'ME': // Montenegro
+        case 'NL': // Netherlands
+        case 'PT': // Portugal
+        case 'SM': // San Marino
+        case 'SK': // Slovakia
+        case 'SI': // Slovenia
+        case 'ES': // Spain
+        case 'VA': // Vatican City
+            return '€';
+
+        // Europe - Other Currencies
+        case 'GB': // United Kingdom
         case 'UK':
             return '£';
-        case 'IE':
-            return '€';
-        case 'US':
-            return '$';
+        case 'AL': return 'L'; // Albania
+        case 'BY': return 'Br'; // Belarus
+        case 'BA': return 'KM'; // Bosnia and Herzegovina
+        case 'BG': return 'лв'; // Bulgaria
+        case 'HR': return 'kn'; // Croatia
+        case 'CZ': return 'Kč'; // Czech Republic
+        case 'DK': return 'kr'; // Denmark
+        case 'HU': return 'Ft'; // Hungary
+        case 'IS': return 'kr'; // Iceland
+        case 'MD': return 'L'; // Moldova
+        case 'MK': return 'ден'; // North Macedonia
+        case 'NO': return 'kr'; // Norway
+        case 'PL': return 'zł'; // Poland
+        case 'RO': return 'lei'; // Romania
+        case 'RU': return '₽'; // Russia
+        case 'RS': return 'Дин.'; // Serbia
+        case 'SE': return 'kr'; // Sweden
+        case 'CH': return 'CHF'; // Switzerland
+        case 'TR': return '₺'; // Turkey
+        case 'UA': return '₴'; // Ukraine
+
         default:
-            return '';
+            return ''; // Default no symbol
     }
 }
 
@@ -76,8 +147,9 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
             return avatarData.url;
         }
 
-        if (avatarData.type === 'dicebear' && avatarData.style && avatarData.seed) {
-            return `https://api.dicebear.com/8.x/${avatarData.style}/svg?seed=${encodeURIComponent(avatarData.seed)}`;
+        if (avatarData.type === 'dicebear' && avatarData.style) {
+            const seed = avatarData.seed || fallbackSeed;
+            return `https://api.dicebear.com/8.x/${avatarData.style}/svg?seed=${encodeURIComponent(seed)}`;
         }
         
         console.warn('Parsed avatar_id has unknown structure:', avatarData);
@@ -157,7 +229,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
                 {itemIsRating && (
                     <div className="text-gray-300">
                         Rated at <span className="font-semibold text-white">{item.pubs?.name || 'a pub'}</span>
-                        {item.exact_price && currencySymbol && (
+                        {item.exact_price > 0 && (
                             <span className="ml-2 text-lg font-bold text-green-400">{currencySymbol}{item.exact_price.toFixed(2)}</span>
                         )}
                     </div>

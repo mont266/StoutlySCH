@@ -97,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     loadInitialContent();
   }, [fetchPage]);
 
-  const handleLoadMore = async () => {
+  const handleLoadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore || isRefreshing) return;
 
     setIsLoadingMore(true);
@@ -116,8 +116,27 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     } finally {
       setIsLoadingMore(false);
     }
-  };
+  }, [currentPage, fetchPage, hasMore, isLoadingMore, isRefreshing]);
+
+  // Use a ref to hold the callback to prevent re-binding the scroll listener
+  const loadMoreRef = React.useRef(handleLoadMore);
+  useEffect(() => {
+    loadMoreRef.current = handleLoadMore;
+  }, [handleLoadMore]);
   
+  // Effect for infinite scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      // The values of isLoadingMore and hasMore are captured in the 
+      // handleLoadMore callback's closure, so we don't need to check them here.
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
+        loadMoreRef.current();
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []); // Empty dependency array means this effect runs only once
+
   const handleRefresh = async () => {
     if (isRefreshing || isLoadingMore) return;
     
@@ -199,11 +218,9 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                 </div>
             )}
             
-            {hasMore && (
+            {isLoadingMore && (
               <div className="mt-8 text-center">
-                <Button onClick={handleLoadMore} isLoading={isLoadingMore}>
-                  Load More
-                </Button>
+                <Spinner />
               </div>
             )}
           </>

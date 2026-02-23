@@ -33,7 +33,8 @@ const SharableImage = forwardRef<HTMLDivElement, SharableImageProps>(({ rating }
     >
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-5xl font-extrabold tracking-wider uppercase text-amber-500">
+        <h2 className="text-2xl font-bold tracking-widest text-amber-500 uppercase">Stoutly</h2>
+        <h1 className="text-5xl font-extrabold tracking-wider uppercase text-amber-500 -mt-2">
             Pint <span className="font-light text-3xl text-stone-300">of the</span> Week
         </h1>
       </div>
