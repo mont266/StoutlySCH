@@ -8,6 +8,7 @@ import RatingDisplay from './RatingDisplay';
 
 interface ContentCardProps {
   item: ContentItem;
+  onSelectWinner?: (rating: ContentItem) => void;
 }
 
 const ShieldIcon = () => (
@@ -110,7 +111,7 @@ const getCurrencySymbol = (countryCode: string | null | undefined): string => {
 }
 
 
-const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
+const ContentCard: React.FC<ContentCardProps> = ({ item, onSelectWinner }) => {
   const [analysis, setAnalysis] = useState<SocialAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -275,6 +276,14 @@ const ContentCard: React.FC<ContentCardProps> = ({ item }) => {
         <Button onClick={handleAnalyze} isLoading={isAnalyzing} className="w-full">
           {analysis ? 'Re-analyze' : 'Find Social Angle'}
         </Button>
+        {itemIsRating && onSelectWinner && (
+            <Button 
+                onClick={() => onSelectWinner(item)} 
+                className="w-full mt-2 bg-green-600 hover:bg-green-700 from-transparent to-transparent"
+            >
+                Select as Pint of the Week
+            </Button>
+        )}
       </div>
     </div>
   );

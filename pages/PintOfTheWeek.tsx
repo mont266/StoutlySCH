@@ -2,13 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { findPintOfTheWeek } from '../services/geminiService';
 import { type Rating, type PintOfTheWeekAnalysis } from '../types';
-import Button from './Button';
-import Spinner from './Spinner';
-import ContentCard from './ContentCard';
-import SharableImage from './SharableImage';
+import Button from '../components/Button';
+import Spinner from '../components/Spinner';
+import ContentCard from '../components/ContentCard';
+import SharableImage from '../components/SharableImage';
+import ToggleSwitch from '../components/ToggleSwitch';
 import { toPng } from 'html-to-image';
 
-const PintOfTheWeek: React.FC = () => {
+interface PintOfTheWeekProps {
+  manualWinner?: Rating | null;
+  onBack?: () => void;
+}
+
+const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +23,8 @@ const PintOfTheWeek: React.FC = () => {
   const [sharableImage, setSharableImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [previousPints, setPreviousPints] = useState<any[]>([]);
+  const [imageTitle, setImageTitle] = useState('Pint of the Week');
+  const [initialGenerationDone, setInitialGenerationDone] = useState(false);
   
   const imageRef = useRef<HTMLDivElement>(null);
 
@@ -27,6 +35,24 @@ const PintOfTheWeek: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (manualWinner) {
+      handleReset();
+      setIsLoading(true);
+      setLoadingStep('Manual selection received, generating graphic...');
+      setWinningPint(manualWinner);
+      // Create a mock analysis result, as we're skipping the Gemini step
+      setAnalysisResult({
+        id: manualWinner.id,
+        socialScore: 'N/A',
+        analysis: 'This pint was manually selected as the winner.',
+        caption: `Check out this great-looking pint at ${manualWinner.pubs?.name || 'a pub'}! Rated by @${manualWinner.profiles?.username || 'a user'}.`,
+        hashtags: ['#pintOfTheWeek', '#guinness', '#stoutly', `#${manualWinner.pubs?.name?.replace(/\s+/g, '') || 'pub'}`]
+      });
+      setIsGeneratingImage(true);
+    }
+  }, [manualWinner]);
+
   const handleReset = () => {
     setIsLoading(false);
     setLoadingStep('');
@@ -35,6 +61,7 @@ const PintOfTheWeek: React.FC = () => {
     setWinningPint(null);
     setSharableImage(null);
     setIsGeneratingImage(false);
+    setInitialGenerationDone(false);
   };
 
   useEffect(() => {
@@ -71,11 +98,36 @@ const PintOfTheWeek: React.FC = () => {
           setIsLoading(false);
           setLoadingStep('');
           setIsGeneratingImage(false);
+          setInitialGenerationDone(true);
         }
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isGeneratingImage]);
+  }, [isGeneratingImage, analysisResult, winningPint, previousPints]);
+
+  useEffect(() => {
+    if (!initialGenerationDone || !imageRef.current) {
+      return;
+    }
+
+    const regenerateImage = async () => {
+      setSharableImage(null);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const dataUrl = await toPng(imageRef.current!, {
+          quality: 0.98,
+          pixelRatio: 2,
+          cacheBust: true,
+        });
+        setSharableImage(dataUrl);
+      } catch (err) {
+        console.error("Failed to re-generate image:", err);
+        setError("Failed to update image with new title.");
+      }
+    };
+
+    regenerateImage();
+  }, [imageTitle, initialGenerationDone]);
 
   const handleFindPint = async () => {
     handleReset();
@@ -132,12 +184,20 @@ const PintOfTheWeek: React.FC = () => {
     <main className="container mx-auto p-4 md:p-8">
       {isGeneratingImage && winningPint && (
         <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-          <SharableImage ref={imageRef} rating={winningPint} />
+          <SharableImage ref={imageRef} rating={winningPint} title={imageTitle} />
         </div>
       )}
 
-      <div className="text-center mb-8">
-        <h2 className="text-3xl sm:text-4xl font-bold text-white">Find the Pint of the Week</h2>
+      <div className="text-center mb-8 relative">
+        {onBack && (
+          <Button onClick={onBack} className="absolute left-0 top-0 bg-gray-600 hover:bg-gray-700 from-transparent to-transparent">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Feed
+          </Button>
+        )}
+        <h2 className="text-3xl sm:text-4xl font-bold text-white">Pint of the Week Generator</h2>
         <p className="text-gray-400 mt-2 max-w-2xl mx-auto">
           Let Gemini analyze all ratings with photos from the last 7 days to find the best one and generate a ready-to-post social media graphic.
         </p>
@@ -146,7 +206,7 @@ const PintOfTheWeek: React.FC = () => {
       {!analysisResult && !isLoading && !error && (
         <div className="flex justify-center gap-4">
           <Button onClick={handleFindPint} isLoading={isLoading} className="px-8 py-4 text-lg">
-            Find Pint of the Week
+            Find Winner
           </Button>
           {previousPints.length > 0 && (
             <Button onClick={() => {
@@ -182,7 +242,15 @@ const PintOfTheWeek: React.FC = () => {
         <div className="animate-fade-in grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
             {/* Left Column: Sharable Image & Actions */}
             <div className="bg-gray-800/50 rounded-lg p-6 text-center sticky top-24">
-                 <h3 className="text-2xl font-bold text-white mb-4">Your Sharable Image</h3>
+                 <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
+                     <h3 className="text-2xl font-bold text-white">Your Sharable Image</h3>
+                     <ToggleSwitch 
+                        id="title-toggle"
+                        label="Switch Title"
+                        checked={imageTitle === 'Rating of the Week'}
+                        onChange={(checked) => setImageTitle(checked ? 'Rating of the Week' : 'Pint of the Week')}
+                     />
+                </div>
                 {sharableImage ? (
                     <img src={sharableImage} alt="Sharable social media graphic for the pint of the week" className="rounded-md shadow-lg w-full h-auto" />
                 ) : (
@@ -206,7 +274,7 @@ const PintOfTheWeek: React.FC = () => {
                     >
                       Download Image
                     </a>
-                    <Button onClick={handleReset} className="bg-gray-600 hover:bg-gray-700 from-transparent to-transparent">
+                    <Button onClick={manualWinner ? onBack : handleReset} className="bg-gray-600 hover:bg-gray-700 from-transparent to-transparent">
                         Start Over
                     </Button>
                 </div>

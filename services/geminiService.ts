@@ -236,3 +236,64 @@ Your task is to respond with a JSON object. The 'winnerIndex' field in your resp
     return { success: false, error: apiErrorMessage };
   }
 };
+
+const pubSpotlightSchema = {
+  type: Type.OBJECT,
+  properties: {
+    vibeAnalysis: {
+      type: Type.STRING,
+      description: "A 2-sentence summary of the pub's vibe based on user reviews. E.g., 'Locals love the cozy fire...'"
+    },
+    socialCaption: {
+      type: Type.STRING,
+      description: "An engaging Instagram/Facebook caption announcing this pub as the Spotlight Winner."
+    },
+    hashtags: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: "Relevant hashtags."
+    }
+  },
+  required: ['vibeAnalysis', 'socialCaption', 'hashtags']
+};
+
+export const analyzePubSpotlight = async (pubName: string, location: string, ratings: Rating[]): Promise<{ vibeAnalysis: string, socialCaption: string, hashtags: string[] } | null> => {
+  try {
+    const reviews = ratings.map(r => `"${r.message}" (${r.quality}/5)`).join("\n");
+    
+    const prompt = `You are the social media manager for Stoutly. We are featuring "${pubName}" in ${location} as our "Pub Spotlight".
+    
+    Here are recent reviews from our users:
+    ${reviews}
+    
+    Task:
+    1. Write a "Vibe Check" (2 sentences max) summarizing what people love about this place.
+    2. Write a catchy social media caption for Instagram/Facebook highlighting this pub.
+       - TONE: Community-focused, appreciative, "hidden gem" or "local favorite".
+       - AVOID: "Winner", "Champion", "Best Pub", "Competition".
+       - FOCUS: "Spotlight", "Highlight", "Check this out", "Stoutly Community Pick".
+       - CRITICAL: Base the caption ONLY on the provided reviews. Do not invent features (e.g., "great food", "live music") unless explicitly mentioned in the reviews.
+       - MANDATORY: End the caption with this exact disclaimer: "Disclaimer: This spotlight is selected based on Stoutly user ratings and criteria. It is not sponsored or paid for by the pub."
+    3. Generate 3-5 relevant hashtags.
+    
+    Return JSON.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: pubSpotlightSchema,
+        temperature: 0.7,
+      },
+    });
+
+    const jsonString = response.text?.trim();
+    if (!jsonString) return null;
+    
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error("Error analyzing pub spotlight:", error);
+    return null;
+  }
+};

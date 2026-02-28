@@ -9,6 +9,7 @@ export interface Profile {
 
 export interface Rating {
   id: string;
+  pub_id: string; // Added pub_id
   created_at: string;
   quality: number;
   price: number;

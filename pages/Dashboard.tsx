@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { type Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
 import { type ContentItem, type Post, type Rating, isRating } from '../types';
-import Spinner from './Spinner';
-import ContentCard from './ContentCard';
-import Button from './Button';
-import ToggleSwitch from './ToggleSwitch';
-import PintOfTheWeek from './PintOfTheWeek';
+import Spinner from '../components/Spinner';
+import ContentCard from '../components/ContentCard';
+import Button from '../components/Button';
+import ToggleSwitch from '../components/ToggleSwitch';
+import PintOfTheWeek from '../pages/PintOfTheWeek';
 
 interface DashboardProps {
   session: Session;

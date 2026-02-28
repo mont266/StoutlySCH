@@ -5,6 +5,7 @@ import { formatCurrency } from '../utils/currency';
 
 interface SharableImageProps {
   rating: Rating;
+  title: string;
 }
 
 // Star component with updated colors to match the brand palette
@@ -19,7 +20,7 @@ const Star: React.FC<{ filled: boolean }> = ({ filled }) => (
   </svg>
 );
 
-const SharableImage = forwardRef<HTMLDivElement, SharableImageProps>(({ rating }, ref) => {
+const SharableImage = forwardRef<HTMLDivElement, SharableImageProps>(({ rating, title }, ref) => {
   if (!rating.image_url) return null;
 
   return (
@@ -33,9 +34,8 @@ const SharableImage = forwardRef<HTMLDivElement, SharableImageProps>(({ rating }
     >
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-widest text-amber-500 uppercase">Stoutly</h2>
-        <h1 className="text-5xl font-extrabold tracking-wider uppercase text-amber-500 -mt-2">
-            Pint <span className="font-light text-3xl text-stone-300">of the</span> Week
+        <h1 className="text-5xl font-extrabold tracking-wider uppercase text-amber-500">
+            {title}
         </h1>
       </div>
 
