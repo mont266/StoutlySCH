@@ -7,6 +7,7 @@ import ContentCard from './ContentCard';
 import Button from './Button';
 import ToggleSwitch from './ToggleSwitch';
 import PintOfTheWeek from './PintOfTheWeek';
+import WeeklyPlan from './WeeklyPlan';
 
 interface DashboardProps {
   session: Session;
@@ -189,6 +190,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
   return (
     <div className="min-h-screen text-gray-200">
       <main className="container mx-auto p-4 md:p-8">
+        <WeeklyPlan />
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
             <h2 className="text-2xl sm:text-3xl font-bold text-white">Latest Content Feed</h2>
             <Button onClick={handleRefresh} isLoading={isRefreshing} className="flex items-center gap-2 text-sm !py-1.5">
