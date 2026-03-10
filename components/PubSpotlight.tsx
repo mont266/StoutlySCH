@@ -25,6 +25,7 @@ interface PubStats {
   dateGenerated?: string;
   price?: number | null; // Added price
   rank?: number | null; // Added rank
+  badge?: string; // Added badge for why it's selected
 }
 
 const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
@@ -32,9 +33,15 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
   const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [winner, setWinner] = useState<PubStats | null>(null);
+  const [candidates, setCandidates] = useState<PubStats[]>([]);
   const [sharableImage, setSharableImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [history, setHistory] = useState<PubStats[]>([]);
+  const [excludedPubNames, setExcludedPubNames] = useState<string[]>([]);
+  const [allPubData, setAllPubData] = useState<Map<string, any>>(new Map());
+  const [customDate, setCustomDate] = useState<string>(new Date().toLocaleDateString());
+  const [selectedReview, setSelectedReview] = useState<Rating | null>(null);
+  const [isSelectingReview, setIsSelectingReview] = useState(false);
   
   const imageRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +71,7 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
     localStorage.setItem('pubSpotlightHistory', JSON.stringify(newHistory));
   };
 
-  const handleGenerateSpotlight = async () => {
+  const handleGenerateSpotlight = async (currentExcluded: string[] = excludedPubNames) => {
     setIsLoading(true);
     setError(null);
     setWinner(null);
@@ -77,7 +84,7 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
       // Fetch ratings with pub_id
       const { data: ratings, error: dbError } = await supabase
         .from('ratings')
-        .select('id, pub_id, created_at, quality, message, image_url, exact_price, pubs!ratings_pub_id_fkey(name, lng, lat, country_code, address), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
+        .select('id, pub_id, created_at, quality, message, image_url, exact_price, like_count, comment_count, pubs!ratings_pub_id_fkey(name, lng, lat, country_code, address), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
         .gte('created_at', ninetyDaysAgo)
         .not('pubs', 'is', null);
 
@@ -170,10 +177,17 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
       });
 
       // Calculate Scores
+      const now = new Date();
+      const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
       const scoredPubs: PubStats[] = Array.from(pubMap.values())
         .map(pub => {
           const avgRating = pub.ratings.reduce((sum, r) => sum + r.quality, 0) / pub.ratings.length;
           const ratingCount = pub.ratings.length;
+          const imageCount = pub.ratings.filter(r => r.image_url).length;
+          const recentCount = pub.ratings.filter(r => new Date(r.created_at) > fourteenDaysAgo).length;
+          const totalLikes = pub.ratings.reduce((sum, r) => sum + (r.like_count || 0), 0);
+          const totalComments = pub.ratings.reduce((sum, r) => sum + (r.comment_count || 0), 0);
           
           // Find best pint
           const topPint = pub.ratings.sort((a, b) => {
@@ -181,90 +195,133 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
               return (b.image_url ? 1 : 0) - (a.image_url ? 1 : 0);
           })[0];
           
-          // Get price from top pint or average
           const price = topPint.exact_price || null;
 
-          // Scoring Algorithm V5 (Strict Separation):
-          // 1. Display Score: MUST be the official score if available, otherwise the raw average * 20.
-          // 2. Ranking Score: Used ONLY for sorting. Includes bonuses for volume, images, etc.
+          // --- ENHANCED ELITE SELECTION ALGORITHM ---
           
-          let displayScore = 0;
-          let rankingScore = 0;
+          // 1. Base Quality (0-50 pts)
+          // We use a slightly higher multiplier for the raw average
+          const qualityScore = avgRating * 10;
+          
+          // 2. Consistency Factor (0-15 pts)
+          // Calculate variance - lower variance means more consistent quality
+          const variance = pub.ratings.length > 1 
+            ? pub.ratings.reduce((sum, r) => sum + Math.pow(r.quality - avgRating, 2), 0) / (pub.ratings.length - 1)
+            : 1;
+          const consistencyBonus = Math.max(0, 15 - (variance * 10));
+          
+          // 3. Visual Richness (0-20 pts)
+          // Photos are critical for social media spotlights
+          const photoDensity = imageCount / ratingCount;
+          const visualBonus = photoDensity * 20;
+          
+          // 4. Social Engagement & Buzz (0-10 pts)
+          const buzzBonus = Math.min((totalLikes + totalComments * 1.5), 10);
+          
+          // 5. Volume & Trust Bonus (0-10 pts)
+          // More ratings = more trust in the score
+          const volumeBonus = Math.min(ratingCount * 1.5, 10);
+          
+          // 6. Official Recognition (0-10 pts)
+          const officialBonus = (pub.officialScore && pub.officialScore >= 75) ? 10 : 0;
 
-          if (pub.officialScore !== null) {
-              displayScore = pub.officialScore;
-              rankingScore = pub.officialScore; // Start ranking with official score
-          } else {
-              displayScore = avgRating * 20;
-              rankingScore = displayScore;
-          }
+          // 7. Trending & Recency (0-10 pts)
+          const recencyBonus = (recentCount / ratingCount) * 10;
 
-          // Add bonuses ONLY to rankingScore, never to displayScore
-          rankingScore += Math.min(ratingCount, 10); // Volume bonus
-          if (topPint.image_url) rankingScore += 5; // Image bonus
+          // 8. Variety Factor (0-10 pts)
+          // Increased to ensure a wider selection of pubs surfaces
+          const varietyBonus = Math.random() * 10;
+
+          const rankingScore = qualityScore + consistencyBonus + visualBonus + buzzBonus + volumeBonus + officialBonus + recencyBonus + varietyBonus;
+          const displayScore = pub.officialScore !== null ? pub.officialScore : avgRating * 20;
+
+          // Determine Badge
+          let badge = "Community Pick";
+          if (avgRating >= 4.5 && ratingCount >= 5) badge = "Stoutly Elite 🏆";
+          else if (recentCount >= 3) badge = "Trending 🔥";
+          else if (photoDensity > 0.75) badge = "Visual Winner 📸";
+          else if (avgRating >= 4.6 && ratingCount < 4) badge = "Hidden Gem 💎";
+          else if (consistencyBonus > 12 && avgRating > 4.2) badge = "Consistent Choice ✅";
+          else if (buzzBonus > 8) badge = "High Buzz 💬";
+          else if (avgRating > 4.7) badge = "Top Rated ⭐";
 
           return {
             name: pub.name,
             location: pub.location,
             avgRating,
             totalRatings: ratingCount,
-            score: displayScore, // PURE score for display
-            rankingScore,        // Boosted score for sorting
+            score: displayScore,
+            rankingScore,
             topRatedPint: topPint,
-            price: price, // Add price to stats
-            rank: pub.rank // Add rank
+            price: price,
+            rank: pub.rank,
+            badge
           };
         })
-        .filter(p => p.totalRatings >= 2); // Keep the threshold to ensure recent relevance
+        .filter(p => p.totalRatings >= 2 && !currentExcluded.includes(p.name)); // Keep the threshold and filter excluded
 
       // Sort by RANKING score descending
       scoredPubs.sort((a, b) => b.rankingScore - a.rankingScore);
 
       if (scoredPubs.length === 0) {
-         // Fallback logic
-         const rawSorted = Array.from(pubMap.values()).map(pub => ({
-            name: pub.name,
-            location: pub.location,
-            avgRating: pub.ratings.reduce((sum, r) => sum + r.quality, 0) / pub.ratings.length,
-            totalRatings: pub.ratings.length,
-            score: pub.officialScore || (pub.ratings.reduce((sum, r) => sum + r.quality, 0) / pub.ratings.length * 20),
-            rankingScore: 0, // Not needed for fallback really
-            topRatedPint: pub.ratings[0]
-        })).sort((a, b) => b.score - a.score);
-        
-        if (rawSorted.length > 0) setWinner({ ...rawSorted[0], rankingScore: rawSorted[0].score });
-        else throw new Error("Could not calculate pub scores.");
-      } else {
-        setWinner(scoredPubs[0]);
-      }
+         throw new Error("No more pubs available to analyze after exclusions.");
+      } 
       
-      // GEMINI ANALYSIS
-      setLoadingStep('Asking Gemini to write the social post...');
-      const winningPub = scoredPubs.length > 0 ? scoredPubs[0] : null;
-      
-      if (winningPub) {
-          const pubData = pubMap.get(winningPub.name);
-          if (pubData) {
-              const analysis = await analyzePubSpotlight(winningPub.name, winningPub.location, pubData.ratings);
-              if (analysis) {
-                  setWinner(prev => prev ? ({
-                      ...prev,
-                      vibeAnalysis: analysis.vibeAnalysis,
-                      socialCaption: analysis.socialCaption,
-                      hashtags: analysis.hashtags
-                  }) : null);
-              }
-          }
-      }
-
-      setLoadingStep('Generating social media graphic...');
-      setIsGeneratingImage(true);
+      setCandidates(scoredPubs.slice(0, 12));
+      setAllPubData(pubMap);
+      setIsLoading(false);
+      setLoadingStep('');
 
     } catch (err: any) {
       console.error("Error generating spotlight:", err);
       setError(err.message || 'Failed to generate Pub Spotlight.');
       setIsLoading(false);
     }
+  };
+
+  const handleSelectCandidate = (pub: PubStats) => {
+    setWinner(pub);
+    setIsSelectingReview(true);
+  };
+
+  const handleConfirmReview = async (review: Rating) => {
+    if (!winner) return;
+    
+    setIsLoading(true);
+    setIsSelectingReview(false);
+    setSelectedReview(review);
+    setLoadingStep(`Analyzing ${winner.name}...`);
+    setCandidates([]);
+
+    try {
+      const pubData = allPubData.get(winner.name);
+      if (pubData) {
+          // Use the selected review as the context for analysis
+          const analysis = await analyzePubSpotlight(winner.name, winner.location, [review]);
+          if (analysis) {
+              setWinner(prev => prev ? ({
+                  ...prev,
+                  topRatedPint: review, // Update the top pint to the selected one
+                  vibeAnalysis: analysis.vibeAnalysis,
+                  socialCaption: analysis.socialCaption,
+                  hashtags: analysis.hashtags
+              }) : null);
+          }
+      }
+
+      setLoadingStep('Generating social media graphic...');
+      setIsGeneratingImage(true);
+    } catch (err: any) {
+      console.error("Error analyzing selected pub:", err);
+      setError("Failed to analyze the selected pub.");
+      setIsLoading(false);
+    }
+  };
+
+  const handlePickDifferentPub = () => {
+    setWinner(null);
+    setSharableImage(null);
+    handleGenerateSpotlight();
   };
 
   useEffect(() => {
@@ -296,21 +353,32 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
     <main className="container mx-auto p-4 md:p-8 min-h-screen">
       {winner && (
         <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-          <SharablePubImage ref={imageRef} pubStats={winner} />
+          <SharablePubImage ref={imageRef} pubStats={winner} customDate={customDate} />
         </div>
       )}
 
       <div className="text-center mb-12 relative">
         <h2 className="text-4xl font-bold text-white mb-4">Pub Spotlight</h2>
-        <p className="text-gray-400 max-w-2xl mx-auto">
+        <p className="text-gray-400 max-w-2xl mx-auto mb-6">
           Discover the top-performing pub of the season based on Stoutly community ratings.
         </p>
+        
+        <div className="flex justify-center items-center gap-4 max-w-xs mx-auto bg-gray-800/50 p-3 rounded-xl border border-gray-700">
+            <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">Display Date:</span>
+            <input 
+                type="text" 
+                value={customDate} 
+                onChange={(e) => setCustomDate(e.target.value)}
+                className="bg-gray-900 border border-gray-700 rounded px-3 py-1 text-sm text-white focus:outline-none focus:border-amber-500 w-full"
+                placeholder="e.g. 10/03/2026"
+            />
+        </div>
       </div>
 
-      {!winner && !isLoading && !error && (
+      {!winner && candidates.length === 0 && !isLoading && !error && (
         <div className="flex flex-col items-center gap-8">
-          <Button onClick={handleGenerateSpotlight} className="px-8 py-4 text-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-black font-bold">
-            Generate New Spotlight
+          <Button onClick={() => handleGenerateSpotlight()} className="px-8 py-4 text-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-black font-bold">
+            Find Top Pubs
           </Button>
 
           {history.length > 0 && (
@@ -337,6 +405,99 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {!winner && candidates.length > 0 && !isLoading && !isSelectingReview && (
+        <div className="max-w-6xl mx-auto animate-fade-in">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold text-white">Select a Pub to Spotlight</h3>
+            <Button onClick={() => setCandidates([])} className="bg-gray-700 text-sm">Cancel</Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {candidates.map((pub, index) => (
+              <div 
+                key={pub.name} 
+                className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 hover:border-amber-500/50 transition-all group cursor-pointer flex flex-col"
+                onClick={() => handleSelectCandidate(pub)}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className="min-w-0">
+                    <h4 className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors truncate">{pub.name}</h4>
+                    <p className="text-gray-400 text-sm truncate">📍 {pub.location}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <div className="bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full text-sm font-bold border border-amber-500/20">
+                      #{index + 1}
+                    </div>
+                    <div className="text-[10px] font-bold text-purple-400 uppercase tracking-widest bg-purple-400/10 px-2 py-0.5 rounded border border-purple-400/20">
+                      {pub.badge}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-6 mt-auto">
+                  <div className="bg-gray-900/50 p-2 rounded text-center">
+                    <div className="text-lg font-bold text-white">{pub.avgRating.toFixed(1)}</div>
+                    <div className="text-[10px] text-gray-500 uppercase">Avg Rating</div>
+                  </div>
+                  <div className="bg-gray-900/50 p-2 rounded text-center">
+                    <div className="text-lg font-bold text-white">{pub.totalRatings}</div>
+                    <div className="text-[10px] text-gray-500 uppercase">Ratings</div>
+                  </div>
+                </div>
+
+                <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2">
+                  Select Pub
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isSelectingReview && winner && (
+        <div className="max-w-4xl mx-auto animate-fade-in">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+                <h3 className="text-2xl font-bold text-white">Select a Review for {winner.name}</h3>
+                <p className="text-gray-400 text-sm">Choose the message that will appear on the graphic.</p>
+            </div>
+            <Button onClick={() => setIsSelectingReview(false)} className="bg-gray-700 text-sm">Back</Button>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {allPubData.get(winner.name)?.ratings.map((rating: Rating) => (
+              <div 
+                key={rating.id}
+                className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 hover:border-amber-500/50 transition-all cursor-pointer group"
+                onClick={() => handleConfirmReview(rating)}
+              >
+                <div className="flex items-start gap-4">
+                  {rating.image_url && (
+                    <img src={rating.image_url} alt="Review" className="w-20 h-20 object-cover rounded-lg shrink-0 border border-gray-700" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-amber-500 font-bold">★ {rating.quality.toFixed(1)}</span>
+                            <span className="text-gray-500 text-xs">by @{rating.profiles?.username}</span>
+                        </div>
+                        <span className="text-gray-500 text-xs">{new Date(rating.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-gray-300 italic line-clamp-3">"{rating.message}"</p>
+                  </div>
+                  <div className="shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-amber-500 text-black p-2 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -371,8 +532,14 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
                   >
                     Download Image
                   </a>
-                  <Button onClick={() => setWinner(null)} className="bg-gray-700 hover:bg-gray-600">
+                  <Button onClick={() => {
+                      setWinner(null);
+                      setExcludedPubNames([]);
+                  }} className="bg-gray-700 hover:bg-gray-600">
                     Back to History
+                  </Button>
+                  <Button onClick={handlePickDifferentPub} className="bg-amber-600 hover:bg-amber-700">
+                    Pick Different Pub
                   </Button>
                 </div>
               </div>

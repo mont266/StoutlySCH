@@ -25,6 +25,7 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
   const [previousPints, setPreviousPints] = useState<any[]>([]);
   const [imageTitle, setImageTitle] = useState('Pint of the Week');
   const [initialGenerationDone, setInitialGenerationDone] = useState(false);
+  const [excludedIds, setExcludedIds] = useState<string[]>([]);
   
   const imageRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +63,15 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
     setSharableImage(null);
     setIsGeneratingImage(false);
     setInitialGenerationDone(false);
+    setExcludedIds([]);
+  };
+
+  const handlePickDifferent = () => {
+    if (winningPint) {
+      const newExcluded = [...excludedIds, winningPint.id];
+      setExcludedIds(newExcluded);
+      handleFindPint(newExcluded);
+    }
   };
 
   useEffect(() => {
@@ -129,8 +139,19 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
     regenerateImage();
   }, [imageTitle, initialGenerationDone]);
 
-  const handleFindPint = async () => {
-    handleReset();
+  const handleFindPint = async (currentExcluded: string[] = excludedIds) => {
+    if (currentExcluded.length === 0) {
+      handleReset();
+    } else {
+      // If we are picking a different one, we don't want to reset excludedIds
+      setIsLoading(true);
+      setError(null);
+      setAnalysisResult(null);
+      setWinningPint(null);
+      setSharableImage(null);
+      setIsGeneratingImage(false);
+      setInitialGenerationDone(false);
+    }
     setIsLoading(true);
     setError(null);
 
@@ -151,7 +172,7 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
 
       // Step 2: Get analysis from Gemini
       setLoadingStep('Analyzing pints with Gemini to find the winner...');
-      const analysisResponse = await findPintOfTheWeek(ratings as Rating[]);
+      const analysisResponse = await findPintOfTheWeek(ratings as Rating[], currentExcluded);
       
       if (analysisResponse.success === false) {
         throw new Error(analysisResponse.error);
@@ -205,7 +226,7 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
 
       {!analysisResult && !isLoading && !error && (
         <div className="flex justify-center gap-4">
-          <Button onClick={handleFindPint} isLoading={isLoading} className="px-8 py-4 text-lg">
+          <Button onClick={() => handleFindPint()} isLoading={isLoading} className="px-8 py-4 text-lg">
             Find Winner
           </Button>
           {previousPints.length > 0 && (
@@ -277,6 +298,11 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
                     <Button onClick={manualWinner ? onBack : handleReset} className="bg-gray-600 hover:bg-gray-700 from-transparent to-transparent">
                         Start Over
                     </Button>
+                    {!manualWinner && (
+                        <Button onClick={handlePickDifferent} className="bg-amber-600 hover:bg-amber-700 from-transparent to-transparent">
+                            Pick Different Winner
+                        </Button>
+                    )}
                 </div>
             </div>
 

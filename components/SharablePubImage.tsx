@@ -16,9 +16,10 @@ interface PubStats {
 interface SharablePubImageProps {
   pubStats: PubStats;
   title?: string;
+  customDate?: string;
 }
 
-const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pubStats, title = 'Pub Spotlight' }, ref) => {
+const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pubStats, title = 'Pub Spotlight', customDate }, ref) => {
   const { name, location, avgRating, totalRatings, topRatedPint, score, price, rank } = pubStats;
 
   const getScoreColor = (s: number) => {
@@ -133,10 +134,6 @@ const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pu
                                 <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Avg Rating</span>
                                 <span className="text-lg font-bold text-white">{avgRating.toFixed(1)}</span>
                              </div>
-                             <div>
-                                <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Ratings</span>
-                                <span className="text-lg font-bold text-white">{totalRatings}</span>
-                             </div>
                              {price && (
                                  <div>
                                     <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Price</span>
@@ -184,7 +181,7 @@ const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pu
            <Logo className="w-6 h-6" />
            <span className="font-bold tracking-widest text-stone-500 text-[10px] uppercase">stoutly.co.uk</span>
         </div>
-        <span className="text-[10px] text-stone-400 font-mono font-bold opacity-80">{new Date().toLocaleDateString()}</span>
+        <span className="text-[10px] text-stone-400 font-mono font-bold opacity-80">{customDate || new Date().toLocaleDateString()}</span>
       </div>
     </div>
   );

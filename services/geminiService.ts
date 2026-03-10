@@ -145,10 +145,17 @@ export const generateWeeklySummary = async (data: { topUsers: any[], newUsersCou
   }
 };
 
-export const findPintOfTheWeek = async (ratings: Rating[]): Promise<{ success: true; data: PintOfTheWeekAnalysis } | { success: false; error: string }> => {
+export const findPintOfTheWeek = async (ratings: Rating[], excludedIds: string[] = []): Promise<{ success: true; data: PintOfTheWeekAnalysis } | { success: false; error: string }> => {
   try {
+    // Filter out excluded IDs
+    const filteredRatings = ratings.filter(r => !excludedIds.includes(r.id));
+
+    if (filteredRatings.length === 0) {
+      return { success: false, error: "No more ratings available to analyze after exclusions." };
+    }
+
     // We only need to send the relevant data for analysis, not the full object.
-    const ratingsForPrompt = ratings.map(r => ({
+    const ratingsForPrompt = filteredRatings.map(r => ({
       // The ID is still useful context for the AI, even if it doesn't return it.
       id: r.id, 
       username: r.profiles?.username,
@@ -205,16 +212,16 @@ Your task is to respond with a JSON object. The 'winnerIndex' field in your resp
       const winnerIndex = result.winnerIndex;
 
       // VALIDATION STEP: Ensure the returned index is within the bounds of the original array.
-      if (winnerIndex < 0 || winnerIndex >= ratings.length) {
-        const errorMessage = `AI returned an invalid index. It returned '${winnerIndex}', which is outside the bounds of the provided list (0-${ratings.length - 1}).`;
+      if (winnerIndex < 0 || winnerIndex >= filteredRatings.length) {
+        const errorMessage = `AI returned an invalid index. It returned '${winnerIndex}', which is outside the bounds of the provided list (0-${filteredRatings.length - 1}).`;
         console.error(errorMessage, {
           returnedIndex: winnerIndex,
-          listSize: ratings.length,
+          listSize: filteredRatings.length,
         });
         return { success: false, error: errorMessage };
       }
       
-      const winningRating = ratings[winnerIndex];
+      const winningRating = filteredRatings[winnerIndex];
       
       // Construct the final analysis object with the correct ID.
       const finalAnalysis: PintOfTheWeekAnalysis = {
