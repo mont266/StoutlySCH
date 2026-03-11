@@ -180,7 +180,8 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
       const now = new Date();
       const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
-      const scoredPubs: PubStats[] = Array.from(pubMap.values())
+      // --- BUCKET-BASED DIVERSITY ALGORITHM ---
+      const scoredPubs = Array.from(pubMap.values())
         .map(pub => {
           const avgRating = pub.ratings.reduce((sum, r) => sum + r.quality, 0) / pub.ratings.length;
           const ratingCount = pub.ratings.length;
@@ -188,8 +189,8 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
           const recentCount = pub.ratings.filter(r => new Date(r.created_at) > fourteenDaysAgo).length;
           const totalLikes = pub.ratings.reduce((sum, r) => sum + (r.like_count || 0), 0);
           const totalComments = pub.ratings.reduce((sum, r) => sum + (r.comment_count || 0), 0);
+          const photoDensity = imageCount / ratingCount;
           
-          // Find best pint
           const topPint = pub.ratings.sort((a, b) => {
               if (b.quality !== a.quality) return b.quality - a.quality;
               return (b.image_url ? 1 : 0) - (a.image_url ? 1 : 0);
@@ -197,53 +198,19 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
           
           const price = topPint.exact_price || null;
 
-          // --- ENHANCED ELITE SELECTION ALGORITHM ---
+          // 1. Heavy Hitter Score: Rewards high volume + high official score
+          const heavyHitterScore = (avgRating * 10) + Math.min(ratingCount, 20) + (pub.officialScore ? 25 : 0);
           
-          // 1. Base Quality (0-50 pts)
-          // We use a slightly higher multiplier for the raw average
-          const qualityScore = avgRating * 10;
+          // 2. Rising Star Score: Rewards recent momentum and buzz
+          const risingStarScore = (recentCount * 20) + (totalLikes * 2) + (avgRating * 5);
           
-          // 2. Consistency Factor (0-15 pts)
-          // Calculate variance - lower variance means more consistent quality
-          const variance = pub.ratings.length > 1 
-            ? pub.ratings.reduce((sum, r) => sum + Math.pow(r.quality - avgRating, 2), 0) / (pub.ratings.length - 1)
-            : 1;
-          const consistencyBonus = Math.max(0, 15 - (variance * 10));
+          // 3. Hidden Gem Score: Rewards high ratings with low volume (The Underdogs)
+          const hiddenGemScore = (avgRating >= 4.4 && ratingCount <= 8) ? (avgRating * 25) - (ratingCount * 2) : 0;
           
-          // 3. Visual Richness (0-20 pts)
-          // Photos are critical for social media spotlights
-          const photoDensity = imageCount / ratingCount;
-          const visualBonus = photoDensity * 20;
-          
-          // 4. Social Engagement & Buzz (0-10 pts)
-          const buzzBonus = Math.min((totalLikes + totalComments * 1.5), 10);
-          
-          // 5. Volume & Trust Bonus (0-10 pts)
-          // More ratings = more trust in the score
-          const volumeBonus = Math.min(ratingCount * 1.5, 10);
-          
-          // 6. Official Recognition (0-10 pts)
-          const officialBonus = (pub.officialScore && pub.officialScore >= 75) ? 10 : 0;
+          // 4. Aesthetic Score: Rewards photo density for social media
+          const aestheticScore = (photoDensity * 60) + (avgRating * 5);
 
-          // 7. Trending & Recency (0-10 pts)
-          const recencyBonus = (recentCount / ratingCount) * 10;
-
-          // 8. Variety Factor (0-10 pts)
-          // Increased to ensure a wider selection of pubs surfaces
-          const varietyBonus = Math.random() * 10;
-
-          const rankingScore = qualityScore + consistencyBonus + visualBonus + buzzBonus + volumeBonus + officialBonus + recencyBonus + varietyBonus;
           const displayScore = pub.officialScore !== null ? pub.officialScore : avgRating * 20;
-
-          // Determine Badge
-          let badge = "Community Pick";
-          if (avgRating >= 4.5 && ratingCount >= 5) badge = "Stoutly Elite 🏆";
-          else if (recentCount >= 3) badge = "Trending 🔥";
-          else if (photoDensity > 0.75) badge = "Visual Winner 📸";
-          else if (avgRating >= 4.6 && ratingCount < 4) badge = "Hidden Gem 💎";
-          else if (consistencyBonus > 12 && avgRating > 4.2) badge = "Consistent Choice ✅";
-          else if (buzzBonus > 8) badge = "High Buzz 💬";
-          else if (avgRating > 4.7) badge = "Top Rated ⭐";
 
           return {
             name: pub.name,
@@ -251,23 +218,63 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
             avgRating,
             totalRatings: ratingCount,
             score: displayScore,
-            rankingScore,
+            rankingScore: Math.max(heavyHitterScore, risingStarScore, hiddenGemScore, aestheticScore),
+            heavyHitterScore,
+            risingStarScore,
+            hiddenGemScore,
+            aestheticScore,
             topRatedPint: topPint,
             price: price,
             rank: pub.rank,
-            badge
+            badge: "Community Pick" // Default
           };
         })
-        .filter(p => p.totalRatings >= 2 && !currentExcluded.includes(p.name)); // Keep the threshold and filter excluded
+        .filter(p => p.totalRatings >= 2 && !currentExcluded.includes(p.name));
 
-      // Sort by RANKING score descending
-      scoredPubs.sort((a, b) => b.rankingScore - a.rankingScore);
+      // Bucket Selection Logic
+      const heavyHitters = [...scoredPubs].sort((a, b) => b.heavyHitterScore - a.heavyHitterScore);
+      const risingStars = [...scoredPubs].sort((a, b) => b.risingStarScore - a.risingStarScore);
+      const hiddenGems = [...scoredPubs].sort((a, b) => b.hiddenGemScore - a.hiddenGemScore);
+      const aesthetics = [...scoredPubs].sort((a, b) => b.aestheticScore - a.aestheticScore);
 
-      if (scoredPubs.length === 0) {
-         throw new Error("No more pubs available to analyze after exclusions.");
-      } 
+      const finalSelection = new Map<string, any>();
+      const buckets = [
+          { data: heavyHitters, badge: "Heavy Hitter 🏆" },
+          { data: risingStars, badge: "Rising Star 🚀" },
+          { data: hiddenGems, badge: "Hidden Gem 💎" },
+          { data: aesthetics, badge: "Aesthetic King 📸" }
+      ];
+
+      // Pick 3 from each bucket to ensure diversity
+      buckets.forEach(bucket => {
+          let count = 0;
+          for (const pub of bucket.data) {
+              if (count >= 3) break;
+              if (!finalSelection.has(pub.name)) {
+                  pub.badge = bucket.badge;
+                  finalSelection.set(pub.name, pub);
+                  count++;
+              }
+          }
+      });
+
+      // Fill remaining slots up to 12 if needed
+      if (finalSelection.size < 12) {
+          const remaining = scoredPubs
+            .filter(p => !finalSelection.has(p.name))
+            .sort((a, b) => b.rankingScore - a.rankingScore);
+          
+          for (const pub of remaining) {
+              if (finalSelection.size >= 12) break;
+              finalSelection.set(pub.name, pub);
+          }
+      }
+
+      const candidatesList = Array.from(finalSelection.values());
+      // Shuffle slightly so the order isn't always Heavy Hitters first
+      candidatesList.sort(() => Math.random() - 0.5);
       
-      setCandidates(scoredPubs.slice(0, 12));
+      setCandidates(candidatesList);
       setAllPubData(pubMap);
       setIsLoading(false);
       setLoadingStep('');
