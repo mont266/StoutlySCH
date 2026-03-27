@@ -5,6 +5,7 @@ import { analyzePubSpotlight } from '../services/geminiService';
 import Button from './Button';
 import Spinner from './Spinner';
 import SharablePubImage from './SharablePubImage';
+import ToggleSwitch from './ToggleSwitch';
 import { toPng } from 'html-to-image';
 
 interface PubSpotlightProps {
@@ -42,8 +43,118 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
   const [customDate, setCustomDate] = useState<string>(new Date().toLocaleDateString());
   const [selectedReview, setSelectedReview] = useState<Rating | null>(null);
   const [isSelectingReview, setIsSelectingReview] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [imageFit, setImageFit] = useState<'cover' | 'contain'>('cover');
   
   const imageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        handleSearchPub(searchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSearchPub = async (query: string) => {
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from('pubs')
+        .select('id, name, address, country_code, lat, lng')
+        .ilike('name', `%${query}%`)
+        .limit(10);
+      if (error) throw error;
+      setSearchResults(data || []);
+    } catch (err) {
+      console.error("Search error:", err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectSearchedPub = async (pub: any) => {
+    setIsLoading(true);
+    setLoadingStep(`Fetching data for ${pub.name}...`);
+    setSearchResults([]);
+    setSearchQuery('');
+    
+    try {
+      const { data: ratings, error: ratingsError } = await supabase
+        .from('ratings')
+        .select('id, pub_id, created_at, quality, message, image_url, exact_price, like_count, comment_count, pubs!ratings_pub_id_fkey(name, lng, lat, country_code, address), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
+        .eq('pub_id', pub.id);
+        
+      if (ratingsError) throw ratingsError;
+      
+      const { data: scoreData, error: scoreError } = await supabase
+        .from('pub_scores')
+        .select('pub_score')
+        .eq('pub_id', pub.id)
+        .single();
+        
+      if (scoreError && scoreError.code !== 'PGRST116') {
+        console.warn("Could not fetch pub_score", scoreError);
+      }
+        
+      const officialScore = scoreData ? scoreData.pub_score : null;
+      const pubRatings = ratings || [];
+      const avgRating = pubRatings.length > 0 ? pubRatings.reduce((sum: number, r: any) => sum + r.quality, 0) / pubRatings.length : 0;
+      const displayScore = officialScore !== null ? officialScore : avgRating * 20;
+      
+      const topPint = pubRatings.sort((a: any, b: any) => {
+          if (b.quality !== a.quality) return b.quality - a.quality;
+          return (b.image_url ? 1 : 0) - (a.image_url ? 1 : 0);
+      })[0] || null;
+      
+      let locationDisplay = pub.address || pub.country_code || 'Unknown Location';
+      if (!pub.address) {
+          if (locationDisplay === 'GB') locationDisplay = 'United Kingdom';
+          if (locationDisplay === 'IE') locationDisplay = 'Ireland';
+          if (locationDisplay === 'US') locationDisplay = 'United States';
+      }
+
+      const pubStats: PubStats = {
+        name: pub.name,
+        location: locationDisplay,
+        avgRating,
+        totalRatings: pubRatings.length,
+        score: displayScore,
+        rankingScore: 0,
+        topRatedPint: topPint,
+        price: topPint?.exact_price || null,
+        rank: null,
+        badge: "Manual Selection"
+      };
+      
+      setAllPubData(prev => {
+        const newMap = new Map(prev);
+        newMap.set(pub.name, {
+          id: pub.id,
+          name: pub.name,
+          location: locationDisplay,
+          ratings: pubRatings,
+          officialScore: officialScore,
+          rank: null
+        });
+        return newMap;
+      });
+      
+      handleSelectCandidate(pubStats);
+      
+    } catch (err: any) {
+      console.error("Error fetching selected pub:", err);
+      setError(err.message || 'Failed to fetch pub details.');
+    } finally {
+      setIsLoading(false);
+      setLoadingStep('');
+    }
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('pubSpotlightHistory');
@@ -291,7 +402,7 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
     setIsSelectingReview(true);
   };
 
-  const handleConfirmReview = async (review: Rating) => {
+  const handleConfirmReview = async (review: Rating | null) => {
     if (!winner) return;
     
     setIsLoading(true);
@@ -304,7 +415,7 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
       const pubData = allPubData.get(winner.name);
       if (pubData) {
           // Use the selected review as the context for analysis
-          const analysis = await analyzePubSpotlight(winner.name, winner.location, [review]);
+          const analysis = await analyzePubSpotlight(winner.name, winner.location, review ? [review] : []);
           if (analysis) {
               setWinner(prev => prev ? ({
                   ...prev,
@@ -354,13 +465,13 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
       };
       generate();
     }
-  }, [isGeneratingImage, winner]);
+  }, [isGeneratingImage, winner, imageFit]);
 
   return (
     <main className="container mx-auto p-4 md:p-8 min-h-screen">
       {winner && (
         <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-          <SharablePubImage ref={imageRef} pubStats={winner} customDate={customDate} />
+          <SharablePubImage ref={imageRef} pubStats={winner} customDate={customDate} imageFit={imageFit} />
         </div>
       )}
 
@@ -384,9 +495,42 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
 
       {!winner && candidates.length === 0 && !isLoading && !error && (
         <div className="flex flex-col items-center gap-8">
-          <Button onClick={() => handleGenerateSpotlight()} className="px-8 py-4 text-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-black font-bold">
-            Find Top Pubs
-          </Button>
+          <div className="flex flex-col md:flex-row gap-6 items-center w-full max-w-3xl justify-center">
+            <Button onClick={() => handleGenerateSpotlight()} className="px-8 py-4 text-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-black font-bold whitespace-nowrap">
+              Find Top Pubs
+            </Button>
+            
+            <div className="text-gray-500 font-bold">OR</div>
+            
+            <div className="relative w-full max-w-md">
+              <input
+                type="text"
+                placeholder="Search for a specific pub..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-4 text-white focus:outline-none focus:border-amber-500"
+              />
+              {isSearching && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <Spinner size="h-5 w-5" />
+                </div>
+              )}
+              {searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+                  {searchResults.map(pub => (
+                    <div
+                      key={pub.id}
+                      onClick={() => handleSelectSearchedPub(pub)}
+                      className="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-700/50 last:border-0"
+                    >
+                      <div className="font-bold text-white">{pub.name}</div>
+                      <div className="text-xs text-gray-400 truncate">{pub.address || pub.country_code}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           {history.length > 0 && (
             <div className="w-full max-w-4xl">
@@ -474,36 +618,45 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
           </div>
           
           <div className="grid grid-cols-1 gap-4">
-            {allPubData.get(winner.name)?.ratings.map((rating: Rating) => (
-              <div 
-                key={rating.id}
-                className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 hover:border-amber-500/50 transition-all cursor-pointer group"
-                onClick={() => handleConfirmReview(rating)}
-              >
-                <div className="flex items-start gap-4">
-                  {rating.image_url && (
-                    <img src={rating.image_url} alt="Review" className="w-20 h-20 object-cover rounded-lg shrink-0 border border-gray-700" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2">
-                            <span className="text-amber-500 font-bold">★ {rating.quality.toFixed(1)}</span>
-                            <span className="text-gray-500 text-xs">by @{rating.profiles?.username}</span>
-                        </div>
-                        <span className="text-gray-500 text-xs">{new Date(rating.created_at).toLocaleDateString()}</span>
+            {allPubData.get(winner.name)?.ratings.length === 0 ? (
+              <div className="text-center py-8 bg-gray-800/50 rounded-xl border border-gray-700">
+                <p className="text-gray-400 mb-4">No reviews found for this pub.</p>
+                <Button onClick={() => handleConfirmReview(null)} className="bg-amber-600 hover:bg-amber-700">
+                  Generate Graphic Anyway
+                </Button>
+              </div>
+            ) : (
+              allPubData.get(winner.name)?.ratings.map((rating: Rating) => (
+                <div 
+                  key={rating.id}
+                  className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 hover:border-amber-500/50 transition-all cursor-pointer group"
+                  onClick={() => handleConfirmReview(rating)}
+                >
+                  <div className="flex items-start gap-4">
+                    {rating.image_url && (
+                      <img src={rating.image_url} alt="Review" className="w-20 h-20 object-cover rounded-lg shrink-0 border border-gray-700" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center gap-2">
+                              <span className="text-amber-500 font-bold">★ {rating.quality.toFixed(1)}</span>
+                              <span className="text-gray-500 text-xs">by @{rating.profiles?.username}</span>
+                          </div>
+                          <span className="text-gray-500 text-xs">{new Date(rating.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-gray-300 italic line-clamp-3">"{rating.message}"</p>
                     </div>
-                    <p className="text-gray-300 italic line-clamp-3">"{rating.message}"</p>
-                  </div>
-                  <div className="shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="bg-amber-500 text-black p-2 rounded-full">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
+                    <div className="shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-amber-500 text-black p-2 rounded-full">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}
@@ -527,7 +680,20 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in">
           {/* Left: Image Preview */}
           <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 sticky top-24">
-            <h3 className="text-2xl font-bold text-white mb-4">Social Share</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-2xl font-bold text-white">Social Share</h3>
+              {winner.topRatedPint?.image_url && (
+                <ToggleSwitch
+                  id="image-fit-toggle"
+                  label="Fit Image"
+                  checked={imageFit === 'contain'}
+                  onChange={(checked) => {
+                    setImageFit(checked ? 'contain' : 'cover');
+                    setIsGeneratingImage(true);
+                  }}
+                />
+              )}
+            </div>
             {sharableImage ? (
               <div className="space-y-4">
                 <img src={sharableImage} alt="Pub Spotlight Graphic" className="w-full rounded-lg shadow-2xl" />

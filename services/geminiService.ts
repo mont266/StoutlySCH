@@ -266,7 +266,9 @@ const pubSpotlightSchema = {
 
 export const analyzePubSpotlight = async (pubName: string, location: string, ratings: Rating[]): Promise<{ vibeAnalysis: string, socialCaption: string, hashtags: string[] } | null> => {
   try {
-    const reviews = ratings.map(r => `"${r.message}" (${r.quality}/5)`).join("\n");
+    const reviews = ratings.length > 0 
+      ? ratings.map(r => `"${r.message}" (${r.quality}/5)`).join("\n")
+      : "No reviews available. Focus on the pub's name and location as a community favorite.";
     
     const prompt = `You are the social media manager for Stoutly. We are featuring "${pubName}" in ${location} as our "Pub Spotlight".
     
@@ -279,7 +281,7 @@ export const analyzePubSpotlight = async (pubName: string, location: string, rat
        - TONE: Community-focused, appreciative, "hidden gem" or "local favorite".
        - AVOID: "Winner", "Champion", "Best Pub", "Competition".
        - FOCUS: "Spotlight", "Highlight", "Check this out", "Stoutly Community Pick".
-       - CRITICAL: Base the caption ONLY on the provided reviews. Do not invent features (e.g., "great food", "live music") unless explicitly mentioned in the reviews.
+       - CRITICAL: Base the caption ONLY on the provided reviews (if any). Do not invent features (e.g., "great food", "live music") unless explicitly mentioned in the reviews. If no reviews are provided, write a general enthusiastic caption about discovering this pub.
        - MANDATORY: End the caption with this exact disclaimer: "Disclaimer: This spotlight is selected based on Stoutly user ratings and criteria. It is not sponsored or paid for by the pub."
     3. Generate 3-5 relevant hashtags.
     

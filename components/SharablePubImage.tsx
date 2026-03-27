@@ -17,9 +17,10 @@ interface SharablePubImageProps {
   pubStats: PubStats;
   title?: string;
   customDate?: string;
+  imageFit?: 'cover' | 'contain';
 }
 
-const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pubStats, title = 'Pub Spotlight', customDate }, ref) => {
+const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pubStats, title = 'Pub Spotlight', customDate, imageFit = 'cover' }, ref) => {
   const { name, location, avgRating, totalRatings, topRatedPint, score, price, rank } = pubStats;
 
   const getScoreColor = (s: number) => {
@@ -100,10 +101,18 @@ const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pu
       <div className="relative z-10 flex-1 rounded-2xl overflow-hidden border border-stone-800 shadow-2xl group min-h-0 bg-[#2C2421]">
         {topRatedPint?.image_url ? (
             <>
+                {imageFit === 'contain' && (
+                    <img 
+                        src={topRatedPint.image_url} 
+                        alt="Background Blur" 
+                        className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110"
+                        crossOrigin="anonymous"
+                    />
+                )}
                 <img 
                     src={topRatedPint.image_url} 
                     alt="Featured Pint" 
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className={`absolute inset-0 w-full h-full ${imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
                     crossOrigin="anonymous"
                 />
                 
@@ -170,7 +179,21 @@ const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pu
                  <div className={`${scoreColorClass} w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold border-4 mb-8`}>
                     {Math.round(score)}
                  </div>
-                 <p className="text-stone-500 italic text-lg">"A consistent favorite among the Stoutly community."</p>
+                 {topRatedPint ? (
+                   <div className="mt-4 max-w-md">
+                     <p className="text-white font-medium italic text-xl leading-snug line-clamp-3">"{topRatedPint.message}"</p>
+                     <div className="flex items-center justify-center mt-3">
+                        <img 
+                           src={getAvatarUrl(topRatedPint.profiles)}
+                           alt={topRatedPint.profiles?.username || 'User'}
+                           className="w-8 h-8 rounded-full border border-stone-500 mr-3 object-cover"
+                        />
+                        <p className="text-sm text-stone-300 font-medium">@{topRatedPint.profiles?.username || 'user'}</p>
+                     </div>
+                   </div>
+                 ) : (
+                   <p className="text-stone-500 italic text-lg">"A consistent favorite among the Stoutly community."</p>
+                 )}
              </div>
         )}
       </div>
