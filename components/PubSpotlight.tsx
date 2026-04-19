@@ -25,6 +25,7 @@ interface PubStats {
   hashtags?: string[];
   dateGenerated?: string;
   price?: number | null; // Added price
+  countryCode?: string; // Added countryCode for currency
   rank?: number | null; // Added rank
   badge?: string; // Added badge for why it's selected
 }
@@ -128,6 +129,7 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
         rankingScore: 0,
         topRatedPint: topPint,
         price: topPint?.exact_price || null,
+        countryCode: pub.country_code,
         rank: null,
         badge: "Manual Selection"
       };
@@ -272,6 +274,7 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
             id: pubIdStr,
             name: pubName,
             location: locationDisplay,
+            countryCode: r.pubs.country_code,
             ratings: [],
             officialScore: scoreMap.has(pubIdStr) ? scoreMap.get(pubIdStr)! : null,
             rank: rankMap.has(pubIdStr) ? rankMap.get(pubIdStr)! : null
@@ -336,6 +339,7 @@ const PubSpotlight: React.FC<PubSpotlightProps> = ({ onBack }) => {
             aestheticScore,
             topRatedPint: topPint,
             price: price,
+            countryCode: pub.countryCode,
             rank: pub.rank,
             badge: "Community Pick" // Default
           };

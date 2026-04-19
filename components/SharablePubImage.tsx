@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { type Rating } from '../types';
 import Logo from './Logo';
+import { formatCurrency } from '../utils/currency';
 
 interface PubStats {
   name: string;
@@ -10,6 +11,7 @@ interface PubStats {
   score: number;
   topRatedPint: Rating | null;
   price?: number | null;
+  countryCode?: string;
   rank?: number | null;
 }
 
@@ -21,7 +23,7 @@ interface SharablePubImageProps {
 }
 
 const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pubStats, title = 'Pub Spotlight', customDate, imageFit = 'cover' }, ref) => {
-  const { name, location, avgRating, totalRatings, topRatedPint, score, price, rank } = pubStats;
+  const { name, location, avgRating, totalRatings, topRatedPint, score, price, countryCode, rank } = pubStats;
 
   const getScoreColor = (s: number) => {
       if (s >= 80) return 'bg-yellow-400 border-yellow-300 text-black'; // Gold
@@ -146,7 +148,7 @@ const SharablePubImage = forwardRef<HTMLDivElement, SharablePubImageProps>(({ pu
                              {price && (
                                  <div>
                                     <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Price</span>
-                                    <span className="text-lg font-bold text-amber-400">£{price.toFixed(2)}</span>
+                                    <span className="text-lg font-bold text-amber-400">{formatCurrency(price, countryCode)}</span>
                                  </div>
                              )}
                         </div>

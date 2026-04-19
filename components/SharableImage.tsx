@@ -40,14 +40,14 @@ const SharableImage = forwardRef<HTMLDivElement, SharableImageProps>(({ rating, 
       </div>
 
       {/* Image with overlayed text */}
-      <div className="relative my-4 flex-grow w-full rounded-lg shadow-lg border-2 border-amber-500/50">
+      <div className="relative my-4 w-full aspect-[4/5] rounded-lg shadow-lg border-2 border-amber-500/50 overflow-hidden">
         <img
             src={rating.image_url}
             crossOrigin="anonymous"
-            className="w-full h-full object-cover rounded"
+            className="w-full h-full object-cover"
             alt={`Pint at ${rating.pubs?.name}`}
         />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4 rounded-b">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
              <h2 className="text-3xl font-bold text-white truncate" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.7)' }}>{rating.pubs?.name || 'A Fine Establishment'}</h2>
              <p className="text-lg text-stone-300" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.7)' }}>by @{rating.profiles?.username || 'A Stout Lover'}</p>
         </div>

@@ -28,6 +28,7 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   
   const imageRef = useRef<HTMLDivElement>(null);
+  const prevTitleRef = useRef(imageTitle);
 
   useEffect(() => {
     const savedPints = localStorage.getItem('pintOfTheWeekHistory');
@@ -110,7 +111,7 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
           setIsGeneratingImage(false);
           setInitialGenerationDone(true);
         }
-      }, 500);
+      }, 1200);
       return () => clearTimeout(timer);
     }
   }, [isGeneratingImage, analysisResult, winningPint, previousPints]);
@@ -119,6 +120,11 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
     if (!initialGenerationDone || !imageRef.current) {
       return;
     }
+
+    if (prevTitleRef.current === imageTitle) {
+      return;
+    }
+    prevTitleRef.current = imageTitle;
 
     const regenerateImage = async () => {
       setSharableImage(null);
@@ -163,7 +169,8 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
         .from('ratings')
         .select('id, created_at, quality, message, image_url, like_count, comment_count, price, is_private, exact_price, pubs!ratings_pub_id_fkey(name, lng, lat, country_code), profiles:profiles!ratings_user_id_fkey(username, avatar_id)')
         .gte('created_at', sevenDaysAgo)
-        .not('image_url', 'is', null);
+        .not('image_url', 'is', null)
+        .neq('image_url', '');
 
       if (dbError) throw new Error(dbError.message);
       if (!ratings || ratings.length === 0) {
@@ -203,7 +210,7 @@ const PintOfTheWeek: React.FC<PintOfTheWeekProps> = ({ manualWinner, onBack }) =
 
   return (
     <main className="container mx-auto p-4 md:p-8">
-      {isGeneratingImage && winningPint && (
+      {winningPint && (
         <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
           <SharableImage ref={imageRef} rating={winningPint} title={imageTitle} />
         </div>
