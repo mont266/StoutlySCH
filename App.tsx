@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import PintOfTheWeek from './components/PintOfTheWeek';
 import PubSpotlight from './components/PubSpotlight';
 import Leaderboard from './components/Leaderboard';
+import SponsorshipHub from './components/SponsorshipHub';
 import Branding from './components/Branding';
 import AccessDenied from './components/AccessDenied';
 import { type Profile } from '../types';
@@ -75,6 +76,7 @@ const App: React.FC = () => {
           {page === 'potw' && <PintOfTheWeek />}
           {page === 'pub-spotlight' && <PubSpotlight />}
           {page === 'leaderboard' && <Leaderboard />}
+          {page === 'sponsorships' && <SponsorshipHub />}
           {page === 'branding' && <Branding />}
         </Layout>
       ) : (
